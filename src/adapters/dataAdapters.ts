@@ -7,7 +7,7 @@ import {
 } from '../api/types';
 
 // Импортируем типы frontend (из существующих типов)
-import { Product, Customer, Order, InventoryItem } from '../types';
+import { Product, Customer, Order, InventoryItem, OrderHistoryItem } from '../types';
 
 // ============== CLIENT/CUSTOMER ADAPTERS ==============
 export function adaptBackendClientToCustomer(backendClient: BackendClient): Customer {
@@ -153,6 +153,134 @@ export function adaptInventoryItemToBackendInventory(item: Partial<InventoryItem
 }
 
 // ============== ORDER ADAPTERS ==============
+
+// Helper function to generate order history based on status and creation date
+function generateOrderHistory(order: BackendOrder): OrderHistoryItem[] {
+  const history: OrderHistoryItem[] = [];
+  const createdAt = new Date(order.created_at);
+
+  // Add order creation event
+  history.push({
+    date: createdAt.toISOString(),
+    description: 'Заказ был создан в системе',
+    type: 'created'
+  });
+
+  // Based on status, add relevant history events
+  const status = order.status?.toLowerCase();
+  const baseTime = createdAt.getTime();
+
+  if (status !== 'новый') {
+    // Add payment event (5-30 minutes after creation)
+    const paymentTime = new Date(baseTime + (5 + Math.random() * 25) * 60 * 1000);
+    history.push({
+      date: paymentTime.toISOString(),
+      description: 'Заказ был оплачен',
+      type: 'paid'
+    });
+  }
+
+  if (['в работе', 'собран', 'собранный', 'готов', 'доставлен', 'выполнен'].includes(status || '')) {
+    // Add assignment event (1-6 hours after creation)
+    const assignmentTime = new Date(baseTime + (1 + Math.random() * 5) * 60 * 60 * 1000);
+    history.push({
+      date: assignmentTime.toISOString(),
+      description: `Заказ принят в работу${order.executor ? ` флористом ${order.executor.name || order.executor.username}` : ''}`,
+      type: 'assigned'
+    });
+  }
+
+  if (['собран', 'собранный', 'готов', 'доставлен', 'выполнен', 'в доставке'].includes(status || '')) {
+    // Add assembly event (2-8 hours after creation)
+    const assemblyTime = new Date(baseTime + (2 + Math.random() * 6) * 60 * 60 * 1000);
+    history.push({
+      date: assemblyTime.toISOString(),
+      description: 'Заказ собран и готов к доставке',
+      type: 'assembled'
+    });
+  }
+
+  if (['в доставке'].includes(status || '')) {
+    // Add delivery start event
+    const deliveryTime = new Date(baseTime + (4 + Math.random() * 4) * 60 * 60 * 1000);
+    history.push({
+      date: deliveryTime.toISOString(),
+      description: `Заказ передан курьеру${order.courier ? ` ${order.courier.name || order.courier.username}` : ''}`,
+      type: 'delivery'
+    });
+  }
+
+  if (['доставлен', 'выполнен'].includes(status || '')) {
+    // Add completion event
+    const completionTime = new Date(baseTime + (6 + Math.random() * 6) * 60 * 60 * 1000);
+    history.push({
+      date: completionTime.toISOString(),
+      description: 'Заказ успешно доставлен',
+      type: 'completed'
+    });
+  }
+
+  return history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+// Helper function to format delivery date in Russian
+function formatDeliveryDate(date?: string | Date): string {
+  if (!date) return 'Не указана';
+
+  const deliveryDate = typeof date === 'string' ? new Date(date) : date;
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfterTomorrow = new Date(today);
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+  // Reset time for comparison
+  today.setHours(0, 0, 0, 0);
+  tomorrow.setHours(0, 0, 0, 0);
+  dayAfterTomorrow.setHours(0, 0, 0, 0);
+  const compareDate = new Date(deliveryDate);
+  compareDate.setHours(0, 0, 0, 0);
+
+  if (compareDate.getTime() === today.getTime()) {
+    return 'Сегодня';
+  } else if (compareDate.getTime() === tomorrow.getTime()) {
+    return 'Завтра';
+  } else if (compareDate.getTime() === dayAfterTomorrow.getTime()) {
+    return 'Послезавтра';
+  } else {
+    // Format as DD.MM.YYYY
+    const day = compareDate.getDate().toString().padStart(2, '0');
+    const month = (compareDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = compareDate.getFullYear();
+    return `${day}.${month}.${year}`;
+  }
+}
+
+// Helper function to extract city from address
+function extractCityFromAddress(address?: string): string | null {
+  if (!address) return null;
+
+  // Common Kazakhstan cities
+  const cities = ['Алматы', 'Астана', 'Нур-Султан', 'Шымкент', 'Караганда', 'Актобе', 'Тараз', 'Павлодар', 'Усть-Каменогорск', 'Семей'];
+
+  for (const city of cities) {
+    if (address.includes(city)) {
+      return city;
+    }
+  }
+
+  // If address ends with a city name after comma
+  const parts = address.split(',');
+  if (parts.length > 1) {
+    const lastPart = parts[parts.length - 1].trim();
+    if (lastPart && !lastPart.includes('кв.') && !lastPart.includes('д.') && !lastPart.includes('офис')) {
+      return lastPart;
+    }
+  }
+
+  return null;
+}
+
 function mapOrderStatus(backendStatus: string): "new" | "paid" | "assembled" | "completed" | "accepted" | "in-transit" {
   const statusMap: { [key: string]: "new" | "paid" | "assembled" | "completed" | "accepted" | "in-transit" } = {
     'новый': 'new',
@@ -181,8 +309,10 @@ export function adaptBackendOrderToOrder(backendOrder: BackendOrder): Order {
     // Map status
     status: mapOrderStatus(backendOrder.status),
 
-    deliveryDate: "today" as const,
+    deliveryDate: formatDeliveryDate(backendOrder.delivery_date),
     deliveryAddress: backendOrder.delivery_address,
+    deliveryCity: extractCityFromAddress(backendOrder.delivery_address) || 'Алматы',
+    deliveryTime: backendOrder.delivery_time || undefined,
     deliveryTimeRange: backendOrder.delivery_time_range || 'В течение дня',
 
     totalPrice: backendOrder.total_price || 0,
@@ -225,6 +355,9 @@ export function adaptBackendOrderToOrder(backendOrder: BackendOrder): Order {
       status: 'pending',
       method: 'cash'
     },
+
+    // Generate order history based on status and data
+    history: generateOrderHistory(backendOrder),
 
     // Default values for existing frontend fields
     priority: 'normal',

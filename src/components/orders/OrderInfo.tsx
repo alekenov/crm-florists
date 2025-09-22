@@ -1,5 +1,5 @@
 import React from 'react';
-import { Order } from '../../src/types';
+import { Order } from '../../types';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
@@ -84,12 +84,15 @@ export function OrderInfo({
           <div>
             <Label>Дата доставки</Label>
             {isEditing ? (
-              <Input
-                type="text"
+              <select
                 value={editableData?.deliveryDate || order.deliveryDate}
                 onChange={(e) => handleChange('deliveryDate', e.target.value)}
-                className="mt-1"
-              />
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="Сегодня">Сегодня</option>
+                <option value="Завтра">Завтра</option>
+                <option value="Послезавтра">Послезавтра</option>
+              </select>
             ) : (
               <div className="mt-1 p-3 bg-gray-50 rounded-md">
                 <p className="text-sm">{order.deliveryDate}</p>
@@ -97,32 +100,43 @@ export function OrderInfo({
             )}
           </div>
 
-          {order.deliveryType === 'delivery' && (
-            <div>
-              <Label>Адрес доставки</Label>
-              {isEditing ? (
-                <Input
-                  type="text"
-                  value={editableData?.address || order.deliveryAddress || ''}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  className="mt-1"
-                />
-              ) : (
-                <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                  <p className="text-sm">{order.deliveryAddress || 'Не указан'}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {order.deliveryTime && (
-            <div>
-              <Label>Время доставки</Label>
+          <div>
+            <Label>Адрес доставки</Label>
+            {isEditing ? (
+              <Input
+                type="text"
+                value={editableData?.address || order.deliveryAddress || ''}
+                onChange={(e) => handleChange('address', e.target.value)}
+                className="mt-1"
+              />
+            ) : (
               <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm">{order.deliveryTime}</p>
+                <p className="text-sm">{order.deliveryAddress || 'Не указан'}</p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          <div>
+            <Label>Время доставки</Label>
+            {isEditing ? (
+              <select
+                value={editableData?.deliveryTimeRange || order.deliveryTimeRange || order.deliveryTime || ''}
+                onChange={(e) => handleChange('deliveryTimeRange', e.target.value)}
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Выберите время</option>
+                <option value="09:00-12:00">09:00-12:00</option>
+                <option value="12:00-15:00">12:00-15:00</option>
+                <option value="15:00-18:00">15:00-18:00</option>
+                <option value="18:00-21:00">18:00-21:00</option>
+                <option value="В течение дня">В течение дня</option>
+              </select>
+            ) : (
+              <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                <p className="text-sm">{order.deliveryTimeRange || order.deliveryTime || 'Не указано'}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Customer Information */}

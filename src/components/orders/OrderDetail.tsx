@@ -32,7 +32,8 @@ export function OrderDetail({
     const order = orders?.find(o => o.id === orderId);
     if (order) {
       setEditData({
-        deliveryAddress: order.deliveryAddress,
+        address: order.deliveryAddress,  // Changed from deliveryAddress to address
+        deliveryDate: order.deliveryDate,
         deliveryTimeRange: order.deliveryTimeRange,
         comment: order.comment,
         postcardText: order.notes || '',
@@ -67,7 +68,8 @@ export function OrderDetail({
     if (order) {
       setIsEditing(true);
       setEditData({
-        deliveryAddress: order.deliveryAddress,
+        address: order.deliveryAddress,  // Changed from deliveryAddress to address
+        deliveryDate: order.deliveryDate,
         deliveryTimeRange: order.deliveryTimeRange,
         comment: order.comment,
         postcardText: order.notes || '',
@@ -93,11 +95,35 @@ export function OrderDetail({
       if (editData.postcardText !== undefined) {
         updateData.notes = editData.postcardText;
       }
-      if (editData.deliveryAddress !== undefined) {
-        updateData.delivery_address = editData.deliveryAddress;
+      if (editData.address !== undefined) {
+        updateData.delivery_address = editData.address;  // Changed from editData.deliveryAddress to editData.address
       }
       if (editData.deliveryTimeRange !== undefined) {
         updateData.delivery_time_range = editData.deliveryTimeRange;
+      }
+      if (editData.deliveryDate !== undefined) {
+        // Convert Russian date strings to ISO date
+        const today = new Date();
+        let deliveryDate: Date;
+
+        if (editData.deliveryDate === 'Сегодня') {
+          deliveryDate = today;
+        } else if (editData.deliveryDate === 'Завтра') {
+          deliveryDate = new Date(today);
+          deliveryDate.setDate(deliveryDate.getDate() + 1);
+        } else if (editData.deliveryDate === 'Послезавтра') {
+          deliveryDate = new Date(today);
+          deliveryDate.setDate(deliveryDate.getDate() + 2);
+        } else if (editData.deliveryDate.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+          // Handle DD.MM.YYYY format
+          const [day, month, year] = editData.deliveryDate.split('.');
+          deliveryDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else {
+          // Try to parse as is (ISO format or other)
+          deliveryDate = new Date(editData.deliveryDate);
+        }
+
+        updateData.delivery_date = deliveryDate.toISOString();
       }
 
       // Update recipient data if changed

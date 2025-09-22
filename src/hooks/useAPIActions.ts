@@ -148,7 +148,7 @@ export function useAPIActions(apiState: APIState): APIActions {
 
   const updateOrder = useCallback(async (id: number, data: OrderUpdate): Promise<Order> => {
     try {
-      const updatedOrder = await orders.partialUpdate(id, data);
+      const updatedOrder = await orders.update(id, data);
       await apiState.refetchOrders();
       await apiState.refetchStats(); // Update dashboard stats
       return updatedOrder;
