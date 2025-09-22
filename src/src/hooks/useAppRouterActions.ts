@@ -9,7 +9,7 @@ interface AppRouterState {
   inventory: InventoryItem[];
   apiActions: APIActions;
   setCurrentScreen: (screen: Screen) => void;
-  navigateBack: () => void;
+  goBack?: () => void;
   setActiveTab: (tab: 'orders' | 'products' | 'inventory' | 'customers' | 'profile') => void;
   setSelectedProductId: (id: number | null) => void;
   setSelectedOrderId: (id: string | null) => void;
@@ -38,7 +38,11 @@ export function useAppRouterActions(state: AppRouterState) {
   };
 
   const handleCloseToList = () => {
-    state.navigateBack();
+    if (state.goBack) {
+      state.goBack();
+    } else {
+      state.setCurrentScreen('products');
+    }
   };
 
   const handleViewProduct = (productId: number) => {
@@ -48,7 +52,7 @@ export function useAppRouterActions(state: AppRouterState) {
 
   const handleEditProduct = (productId: number) => {
     state.setSelectedProductId(productId);
-    state.setCurrentScreen('edit-catalog');
+    state.setCurrentScreen('product-edit');
   };
 
   const handleNavigateToDashboard = () => {
@@ -61,7 +65,6 @@ export function useAppRouterActions(state: AppRouterState) {
   };
 
   const handleViewOrder = (orderId: string) => {
-    state.setSelectedOrderId(orderId);
     state.setCurrentScreen('order-detail', { orderId });
   };
 

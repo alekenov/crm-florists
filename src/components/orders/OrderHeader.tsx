@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Share } from 'lucide-react';
-import { Order } from '../../src/types';
+import { Order } from '../../types';
 import { Button } from '../ui/button';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { ShareMenu } from './ShareMenu';

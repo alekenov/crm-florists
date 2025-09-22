@@ -11,19 +11,26 @@ import { Product, Customer, Order, InventoryItem, OrderHistoryItem } from '../ty
 
 // ============== CLIENT/CUSTOMER ADAPTERS ==============
 export function adaptBackendClientToCustomer(backendClient: BackendClient): Customer {
+  // Map client_type to status
+  let status: 'active' | 'vip' | 'inactive' = 'active';
+  if (backendClient.client_type === 'vip') {
+    status = 'vip';
+  } else if (backendClient.client_type === 'inactive') {
+    status = 'inactive';
+  }
+
   return {
     id: backendClient.id,
     name: backendClient.name || `Клиент ${backendClient.phone}`,
     phone: backendClient.phone,
     email: backendClient.email,
     address: backendClient.address,
-    // Mapping client_type to customer type
-    type: backendClient.client_type,
+    status: status,
     notes: backendClient.notes,
-    createdAt: new Date(backendClient.created_at),
-    ordersCount: 0, // Will be calculated separately
-    totalSpent: 0,   // Will be calculated separately
-    lastOrderDate: undefined // Will be calculated separately
+    memberSince: new Date(backendClient.created_at),
+    totalOrders: 0, // Will be calculated separately or from backend
+    totalSpent: 0,   // Will be calculated separately or from backend
+    lastOrderDate: new Date() // Will be calculated separately or from backend
   };
 }
 
@@ -40,27 +47,64 @@ export function adaptCustomerToBackendClient(customer: Partial<Customer>): any {
 
 // ============== PRODUCT ADAPTERS ==============
 export function adaptBackendProductToProduct(backendProduct: BackendProduct): Product {
+  // Parse JSON strings for arrays
+  let parsedImages = [];
+  let parsedColors = [];
+  let parsedComposition = [];
+
+  try {
+    if (backendProduct.images) {
+      parsedImages = JSON.parse(backendProduct.images);
+    }
+  } catch (e) {
+    parsedImages = [];
+  }
+
+  try {
+    if (backendProduct.colors) {
+      parsedColors = JSON.parse(backendProduct.colors);
+    }
+  } catch (e) {
+    parsedColors = ["#4ecdc4"];
+  }
+
+  try {
+    if (backendProduct.composition) {
+      parsedComposition = JSON.parse(backendProduct.composition);
+    }
+  } catch (e) {
+    parsedComposition = [];
+  }
+
   return {
     id: backendProduct.id,
     title: backendProduct.name,
     price: backendProduct.price.toString(),
-    image: backendProduct.image_url || "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400",
-    isAvailable: true,
+    image: backendProduct.image_url || parsedImages[0] || "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400",
+    images: parsedImages,
+    isAvailable: backendProduct.is_available !== false,
     createdAt: new Date(backendProduct.created_at),
-    type: "catalog", // Default type
+    type: (backendProduct.type || "catalog") as "catalog" | "vitrina",
 
     // Map category to appropriate fields
     description: backendProduct.description || undefined,
     preparationTime: backendProduct.preparation_time || undefined,
+    preparation_time: backendProduct.preparation_time || undefined, // Add both formats for compatibility
 
-    // Default values for existing frontend fields
-    width: "30",
-    height: "40",
-    colors: ["#4ecdc4"],
-    productionTime: backendProduct.preparation_time ? `${backendProduct.preparation_time} мин` : "2-3 часа",
-    catalogWidth: "25",
-    catalogHeight: "35",
-    ingredients: []
+    // New fields
+    discount: backendProduct.discount?.toString() || undefined,
+    composition: parsedComposition,
+    productionTime: backendProduct.production_time || undefined,
+    production_time: backendProduct.production_time || undefined, // Add both formats for compatibility
+
+    // Size fields
+    width: backendProduct.width || "30",
+    height: backendProduct.height || "40",
+    colors: parsedColors.length > 0 ? parsedColors : ["#4ecdc4"],
+    catalogWidth: backendProduct.width || "25",
+    catalogHeight: backendProduct.height || "35",
+    ingredients: [],
+    expiryDate: backendProduct.expiry_date ? new Date(backendProduct.expiry_date) : undefined
   };
 }
 

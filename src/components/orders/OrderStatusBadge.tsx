@@ -1,4 +1,4 @@
-import { Order } from "../../src/types";
+import { Order } from "../../types";
 import { StatusBadge } from "../common/StatusBadge";
 
 interface OrderStatusBadgeProps {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { ArrowLeft, Minus, Plus, Calendar, Package, Camera, Upload, DollarSign, History, Settings } from "lucide-react";
 import { toast } from "sonner@2.0.3";
+import { useInventoryDetail } from "../hooks/useDetailData";
+import { adaptBackendInventoryToInventoryItem } from "../adapters/dataAdapters";
+import { useIntegratedAppState } from "../hooks/useIntegratedAppState";
 
 interface InventoryTransaction {
   id: number;
@@ -20,9 +23,10 @@ interface InventoryTransaction {
 }
 
 interface InventoryItemDetailProps {
-  itemId: number;
+  itemId: number | null;
   onClose: () => void;
   onUpdateItem?: (itemId: number, updates: any) => void;
+  onRefreshInventory?: () => void;
 }
 
 const mockItem = {
@@ -116,17 +120,76 @@ function getTransactionTypeColor(type: string): string {
   }
 }
 
-export function InventoryItemDetail({ itemId, onClose, onUpdateItem }: InventoryItemDetailProps) {
-  const [item, setItem] = useState(mockItem);
-  const [transactions] = useState<InventoryTransaction[]>(mockTransactions);
+export function InventoryItemDetail({ itemId, onClose, onUpdateItem, onRefreshInventory }: InventoryItemDetailProps) {
+  // Fetch individual inventory data
+  const { data: backendInventoryItem, loading, error, refetch } = useInventoryDetail(itemId);
+  const [transactions] = useState<InventoryTransaction[]>(mockTransactions); // Mock for now
   const [isEditing, setIsEditing] = useState(false);
-  const [editedCostPrice, setEditedCostPrice] = useState(item.costPrice);
-  const [editedRetailPrice, setEditedRetailPrice] = useState(item.retailPrice);
+  const [editedCostPrice, setEditedCostPrice] = useState('');
+  const [editedRetailPrice, setEditedRetailPrice] = useState('');
   const [writeOffQuantity, setWriteOffQuantity] = useState('');
   const [writeOffComment, setWriteOffComment] = useState('');
   const [showWriteOff, setShowWriteOff] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
+
+  // State and actions
+  const { apiActions } = useIntegratedAppState();
+
+  // Convert backend inventory item to frontend format using useMemo to prevent re-renders
+  const item = useMemo(() => {
+    return backendInventoryItem ? adaptBackendInventoryToInventoryItem(backendInventoryItem) : null;
+  }, [backendInventoryItem]);
+
+  // Initialize prices when item is loaded
+  useEffect(() => {
+    if (item) {
+      setEditedCostPrice(item.costPrice || '');
+      setEditedRetailPrice(item.retailPrice || item.price || '');
+    }
+  }, [item?.id, item?.costPrice, item?.retailPrice, item?.price]);
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка товара...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2 text-red-600">Ошибка загрузки</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg">
+            Вернуться к складу
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle inventory item not found
+  if (!item) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2">Товар не найден</h2>
+          <p className="text-gray-600 mb-4">Товар с ID {itemId} не существует</p>
+          <Button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg">
+            Вернуться к складу
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Вычисляем наценку
   const calculateMarkup = (costPrice: string, retailPrice: string) => {
@@ -138,21 +201,34 @@ export function InventoryItemDetail({ itemId, onClose, onUpdateItem }: Inventory
     return '0';
   };
 
-  const handleSavePrices = () => {
-    const newMarkup = parseFloat(calculateMarkup(editedCostPrice, editedRetailPrice));
-    setItem(prev => ({
-      ...prev,
-      costPrice: editedCostPrice,
-      retailPrice: editedRetailPrice,
-      markup: newMarkup
-    }));
-    setIsEditing(false);
-    if (onUpdateItem) {
-      onUpdateItem(itemId, {
-        costPrice: editedCostPrice,
-        retailPrice: editedRetailPrice,
-        markup: newMarkup
-      });
+  const handleSavePrices = async () => {
+    if (item) {
+      try {
+        const itemIdNum = typeof itemId === 'string' ? parseInt(itemId) : itemId;
+
+        // Prepare update data for API
+        const updateData: any = {};
+        if (editedCostPrice !== item.costPrice) {
+          updateData.cost_price = parseFloat(editedCostPrice.replace(/[^\d.]/g, ''));
+        }
+        if (editedRetailPrice !== (item.retailPrice || item.price)) {
+          updateData.price = parseFloat(editedRetailPrice.replace(/[^\d.]/g, ''));
+        }
+
+        // Update inventory item through API
+        await apiActions.updateInventoryItem(itemIdNum!, updateData);
+
+        setIsEditing(false);
+
+        // Refresh this specific item and the inventory list
+        await refetch();
+        await onRefreshInventory?.();
+
+        toast.success('Цены обновлены');
+      } catch (error) {
+        console.error('Error updating inventory prices:', error);
+        toast.error('Ошибка при обновлении цен');
+      }
     }
   };
 

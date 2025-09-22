@@ -103,11 +103,12 @@ export function OrdersTable({ orders, onViewOrder, onAddOrder, activeFilter }: O
                           {order.deliveryAddress || 'Адрес не указан'}
                         </div>
                         <div className="text-gray-600">
-                          {order.deliveryDate === 'today' ? 'Сегодня' :
-                           order.deliveryDate === 'tomorrow' ? 'Завтра' :
+                          {order.deliveryDate === 'today' || order.deliveryDate === 'Сегодня' ? 'Сегодня' :
+                           order.deliveryDate === 'tomorrow' || order.deliveryDate === 'Завтра' ? 'Завтра' :
+                           order.deliveryDate === 'Послезавтра' ? 'Послезавтра' :
                            order.deliveryDate ? (order.deliveryDate instanceof Date ?
                              order.deliveryDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) :
-                             'Дата указана') : 'Дата не указана'}, {order.deliveryTimeRange || 'Время не указано'}
+                             typeof order.deliveryDate === 'string' ? order.deliveryDate : 'Дата указана') : 'Дата не указана'}, {order.deliveryTimeRange || order.deliveryTime || 'В течение дня'}
                         </div>
                       </div>
                     </TableCell>

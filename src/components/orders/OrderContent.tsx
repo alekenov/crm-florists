@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
-import { Order } from '../../src/types';
+import { Order } from '../../types';
 import { Button } from '../ui/button';
 import { OrderItems } from './OrderItems';
 import { OrderInfo } from './OrderInfo';
@@ -40,7 +40,7 @@ export function OrderContent({
           <div className="flex items-center gap-4 py-3">
             <div
               className="w-20 h-24 rounded-lg bg-cover bg-center flex-shrink-0"
-              style={{ backgroundImage: order.mainProduct?.image ? `url('${order.mainProduct.image}')` : 'none' }}
+              style={{ backgroundImage: `url('${order.mainProduct.image}')` }}
             />
             <div className="flex-1 min-w-0">
               <div>{order.mainProduct.title}</div>
@@ -94,7 +94,7 @@ export function OrderContent({
                 <div className="flex-1 min-w-0">
                   <div>{item.productTitle}</div>
                   <div className="text-sm text-gray-600">
-                    {item.quantity} шт × {(item.unitPrice || 0).toLocaleString()} ₸
+                    {item.quantity} шт × {item.unitPrice.toLocaleString()} ₸
                   </div>
                 </div>
               </div>

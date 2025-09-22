@@ -89,3 +89,54 @@ The application uses Russian language throughout the UI. Key terms:
 - Склад = Inventory/Warehouse
 - Клиенты = Customers
 - Профиль = Profile
+
+## Project Structure and Backend Integration
+
+### Repository Architecture
+The project is split into two separate repositories:
+- **Frontend**: `CRM for florists10/` (React + TypeScript)
+- **Backend**: `../Leken/` (FastAPI + Python)
+
+This separation is intentional for:
+- Clean technology boundaries
+- Independent deployment cycles
+- Separate CI/CD pipelines
+- Team scalability
+
+### Local Development Setup
+
+#### Quick Start
+```bash
+# Method 1: Using dev script
+chmod +x dev.sh
+./dev.sh start
+
+# Method 2: Docker Compose
+docker-compose up
+
+# Method 3: Manual (two terminals)
+# Terminal 1 - Backend:
+cd ../Leken && python3 -m fastapi dev main_sqlmodel.py --port 8011
+# Terminal 2 - Frontend:
+npm run dev
+```
+
+#### Development Scripts
+- `dev.sh start` - Start both frontend and backend
+- `dev.sh stop` - Stop all services
+- `dev.sh logs [backend|frontend]` - View logs
+- `dev.sh test` - Run tests for both services
+
+### API Contract
+Backend API is expected at `http://localhost:8011` with SQLModel-based endpoints.
+Key API response includes `delivery_time_range` field for order time management.
+
+### Recent Fixes
+- **Delivery Time Saving**: Fixed `delivery_time_range` field persistence
+- **Date Parsing**: Added DD.MM.YYYY format support for Russian dates
+- **API Methods**: Changed from `partialUpdate` to `update` for order modifications
+
+### Backend Repository
+Located at: https://github.com/alekenov/leken-auth-system
+Main API file: `crm_api.py`
+Database: SQLModel with PostgreSQL

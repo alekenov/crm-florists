@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Order } from '../../src/types';
+import { Order } from '../../types';
 import { Button } from '../ui/button';
 import { OrderHistory } from './OrderHistory';
 

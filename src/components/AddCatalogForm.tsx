@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ImageUploader } from "./ImageUploader";
 import { FlowerNameInput } from "./FlowerNameInput";
 import { ColorPicker } from "./common/ColorPicker";
+import { useInventoryList } from "../hooks/useInventoryList";
 
 
 function VideoIcon() {
@@ -51,6 +52,9 @@ export function AddCatalogForm({ onClose, onCreateProduct }: AddCatalogFormProps
   const [newFlowerName, setNewFlowerName] = useState('');
   const [newFlowerCount, setNewFlowerCount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Загружаем список цветов со склада
+  const { inventory, loading: inventoryLoading, error: inventoryError } = useInventoryList();
 
   const handleColorChange = (colors: string[]) => {
     setSelectedColors(colors);
@@ -242,6 +246,8 @@ export function AddCatalogForm({ onClose, onCreateProduct }: AddCatalogFormProps
                       placeholder="Название цветка"
                       className="border-0 border-b border-gray-200 rounded-none px-0 pb-3 h-12 text-base placeholder:text-gray-500 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 w-full touch-manipulation lg:border lg:border-gray-200 lg:rounded-lg lg:px-3 lg:h-10 lg:bg-white lg:text-sm"
                       existingFlowers={composition.map(item => item.name)}
+                      inventory={inventory}
+                      loading={inventoryLoading}
                     />
                   </div>
                   <div className="w-20 lg:w-full lg:col-span-1">

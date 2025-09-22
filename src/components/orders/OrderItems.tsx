@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
-import { Product, OrderItem as OrderItemType } from '../../src/types';
+import { Product, OrderItem as OrderItemType } from '../../types';
 import { Button } from '../ui/button';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
@@ -73,7 +73,7 @@ export function OrderItems({
                   {item.quantity} шт × {(item.unitPrice || 0).toLocaleString()} ₸
                 </p>
                 <p className="text-sm">
-                  Итого: {((item.unitPrice || 0) * item.quantity).toLocaleString()} ₸
+                  Итого: {(item.totalPrice || (item.unitPrice || 0) * item.quantity).toLocaleString()} ₸
                 </p>
               </div>
             </div>

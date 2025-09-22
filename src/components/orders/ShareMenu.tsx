@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link, Eye, Copy, FileText } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
 
 interface ShareMenuProps {
   orderId: string;
@@ -23,13 +22,9 @@ export function ShareMenu({ orderId, orderData, isOpen, onClose }: ShareMenuProp
     try {
       const orderUrl = `${window.location.origin}/order/${orderId}`;
       await navigator.clipboard.writeText(orderUrl);
-      toast.success("Ссылка скопирована", {
-        description: "Ссылка на заказ скопирована в буфер обмена"
-      });
+      console.log("Ссылка скопирована");
     } catch (error) {
-      toast.error("Ошибка копирования", {
-        description: "Не удалось скопировать ссылку"
-      });
+      console.error("Ошибка копирования", error);
     }
     onClose();
   };
@@ -38,13 +33,9 @@ export function ShareMenu({ orderId, orderData, isOpen, onClose }: ShareMenuProp
     try {
       const statusUrl = `${window.location.origin}/order-status/${orderId}`;
       await navigator.clipboard.writeText(statusUrl);
-      toast.success("Ссылка для клиента скопирована", {
-        description: "Отправьте эту ссылку клиенту для отслеживания"
-      });
+      console.log("Ссылка для клиента скопирована");
     } catch (error) {
-      toast.error("Ошибка копирования", {
-        description: "Не удалось скопировать ссылку"
-      });
+      console.error("Ошибка копирования", error);
     }
     onClose();
   };
@@ -64,21 +55,15 @@ export function ShareMenu({ orderId, orderData, isOpen, onClose }: ShareMenuProp
       `.trim();
       
       await navigator.clipboard.writeText(orderText);
-      toast.success("Заказ скопирован", {
-        description: "Полная информация о заказе скопирована"
-      });
+      console.log("Заказ скопирован");
     } catch (error) {
-      toast.error("Ошибка копирования", {
-        description: "Не удалось скопировать текст заказа"
-      });
+      console.error("Ошибка копирования", error);
     }
     onClose();
   };
 
   const handleSharePDF = () => {
-    toast.info("PDF экспорт", {
-      description: "Функция экспорта в PDF будет доступна скоро"
-    });
+    console.log("PDF экспорт будет доступен скоро");
     onClose();
   };
 

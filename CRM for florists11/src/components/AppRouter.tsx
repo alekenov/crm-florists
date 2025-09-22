@@ -1,0 +1,275 @@
+import React from "react";
+
+// Core imports
+import { Screen } from "../src/types";
+import { useAppState } from "../src/hooks/useAppState";
+import { useAppRouterActions } from "../src/hooks/useAppRouterActions";
+
+// Component imports  
+import { AppWrapper } from "./AppWrapper";
+import { ProductTypeSelector } from "./ProductTypeSelector";
+import { AddProductForm } from "./AddProductForm";
+import { AddCatalogForm } from "./AddCatalogForm";
+import { ProductDetail } from "./ProductDetail";
+import { EditCatalogForm } from "./EditCatalogForm";
+import { Orders } from "./orders/Orders";
+import { Dashboard } from "./Dashboard";
+import { MainTabView } from "./MainTabView";
+import { OrderDetail } from "./orders/OrderDetail";
+import { AddOrder } from "./orders/AddOrder";
+import { Inventory } from "./Inventory";
+import { InventoryItemDetail } from "./InventoryItemDetail";
+import { InventoryAudit } from "./InventoryAudit";
+import { AddInventoryItem } from "./AddInventoryItem";
+import { Customers } from "./Customers";
+import { CustomerDetail } from "./customers/CustomerDetail";
+import { AddCustomer } from "./AddCustomer";
+import { Profile } from "./Profile";
+import { ProductsList } from "./products/ProductsList";
+
+export function AppRouter() {
+  // Use centralized state and actions
+  const state = useAppState();
+  
+  // Check if data is loading or has errors
+  if (state.loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка данных...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
+            <p>Ошибка загрузки: {state.error}</p>
+          </div>
+          <button 
+            onClick={state.refetchAll}
+            className="px-4 py-2 bg-primary text-white rounded-lg"
+          >
+            Попробовать снова
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  const actions = useAppRouterActions(state);
+
+  // Tab change handler - now uses URL navigation
+  const handleTabChange = (tab: 'orders' | 'products' | 'inventory' | 'customers' | 'profile') => {
+    state.setActiveTab(tab);
+  };
+
+  // Common wrapper props
+  const wrapperProps = {
+    activeTab: state.activeTab,
+    onActiveTabChange: handleTabChange,
+    onAddProduct: actions.handleAddProduct,
+    onAddOrder: actions.handleAddOrder,
+    onAddInventoryItem: actions.handleAddInventoryItem,
+    onAddCustomer: actions.handleAddCustomer
+  };
+
+  switch (state.currentScreen) {
+    case 'selector':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <ProductTypeSelector 
+            onClose={actions.handleCloseToList}
+            onSelectVitrina={actions.handleSelectVitrina}
+            onSelectCatalog={actions.handleSelectCatalog}
+          />
+        </AppWrapper>
+      );
+
+    case 'vitrina-form':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <AddProductForm 
+            onClose={actions.handleCloseToList}
+            onCreateProduct={actions.handleCreateProduct}
+          />
+        </AppWrapper>
+      );
+
+    case 'catalog-form':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <AddCatalogForm 
+            onClose={actions.handleCloseToList}
+            onCreateProduct={actions.handleCreateProduct}
+          />
+        </AppWrapper>
+      );
+
+    case 'product-detail':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <ProductDetail 
+            productId={state.selectedProductId} 
+            products={state.products}
+            onClose={actions.handleCloseToList} 
+            onUpdateProduct={actions.updateProduct}
+            onEditProduct={actions.handleEditProduct}
+            onRefreshProducts={state.refetchProducts}
+          />
+        </AppWrapper>
+      );
+
+    case 'edit-catalog':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <EditCatalogForm 
+            productId={state.selectedProductId}
+            products={state.products}
+            onClose={actions.handleCloseToList}
+            onUpdateProduct={actions.updateProduct}
+          />
+        </AppWrapper>
+      );
+
+    case 'product-edit':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <EditCatalogForm 
+            productId={state.selectedProductId}
+            products={state.products}
+            onClose={actions.handleCloseToList}
+            onUpdateProduct={actions.updateProduct}
+          />
+        </AppWrapper>
+      );
+
+    case 'dashboard':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <Dashboard onNavigateBack={actions.handleCloseToList} />
+        </AppWrapper>
+      );
+
+    case 'order-detail':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <OrderDetail
+            orderId={state.selectedOrderId || ''}
+            onClose={actions.handleCloseToList}
+            onEdit={actions.handleEditOrder}
+            onDelete={actions.handleDeleteOrder}
+            onUpdateStatus={actions.handleUpdateOrderStatus}
+          />
+        </AppWrapper>
+      );
+
+    case 'add-order':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <AddOrder
+            products={state.products}
+            onClose={actions.handleCloseToList}
+            onCreateOrder={actions.handleCreateOrder}
+          />
+        </AppWrapper>
+      );
+
+    case 'add-inventory-item':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <AddInventoryItem
+            onClose={actions.handleCloseToList}
+            onProcessSupply={(items) => {
+              console.log('Supply processed with items:', items);
+            }}
+          />
+        </AppWrapper>
+      );
+
+    case 'inventory-item-detail':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <InventoryItemDetail
+            itemId={state.selectedInventoryItemId || 0}
+            onClose={actions.handleCloseToList}
+            onUpdateItem={(itemId, updates) => {
+              console.log('Update inventory item:', itemId, updates);
+            }}
+          />
+        </AppWrapper>
+      );
+
+    case 'inventory-audit':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <InventoryAudit
+            onClose={actions.handleCloseToList}
+            onSaveAudit={(auditResults) => {
+              console.log('Audit results saved:', auditResults);
+            }}
+          />
+        </AppWrapper>
+      );
+
+    case 'customer-detail':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <CustomerDetail
+            customerId={state.selectedCustomerId || 0}
+            customers={state.customers}
+            onClose={actions.handleCloseToList}
+            onUpdateCustomer={actions.updateCustomer}
+            onViewOrder={actions.handleViewOrder}
+          />
+        </AppWrapper>
+      );
+
+    case 'add-customer':
+      return (
+        <AppWrapper {...wrapperProps}>
+          <AddCustomer
+            onClose={actions.handleCloseToList}
+            onCreateCustomer={actions.handleCreateCustomer}
+          />
+        </AppWrapper>
+      );
+
+    case 'main':
+    default:
+      return (
+        <MainTabView
+          products={state.products || []}
+          activeTab={state.activeTab}
+          onActiveTabChange={handleTabChange}
+          onAddProduct={actions.handleAddProduct}
+          onViewProduct={actions.handleViewProduct}
+          onToggleProduct={actions.toggleProductStatus}
+          onNavigateToDashboard={actions.handleNavigateToDashboard}
+          onViewOrder={actions.handleViewOrder}
+          onStatusChange={actions.handleOrderStatusChange}
+          onAddOrder={actions.handleAddOrder}
+          onAddInventoryItem={actions.handleAddInventoryItem}
+          onViewInventoryItem={actions.handleViewInventoryItem}
+          onStartInventoryAudit={actions.handleStartInventoryAudit}
+          onAddCustomer={actions.handleAddCustomer}
+          ProductsListComponent={ProductsList}
+          OrdersComponent={(props: any) => <Orders {...props} orders={state.orders || []} />}
+          InventoryComponent={Inventory}
+          CustomersComponent={(props: any) => (
+            <Customers 
+              {...props} 
+              onViewCustomer={actions.handleViewCustomer} 
+              onAddCustomer={actions.handleAddCustomer} 
+              customers={state.customers || []} 
+            />
+          )}
+          ProfileComponent={(props: any) => <Profile {...props} showHeader={false} />}
+        />
+      );
+  }
+}

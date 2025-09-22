@@ -1,0 +1,1 @@
+# УДАЛЕН - Перемещен в docs/Guidelines.md

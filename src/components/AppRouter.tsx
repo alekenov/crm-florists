@@ -68,6 +68,7 @@ export function AppRouter() {
       case 'vitrina-form':
       case 'catalog-form':
       case 'edit-catalog':
+      case 'product-edit':
       case 'selector':
         return 'products';
       case 'order-detail':
@@ -144,11 +145,11 @@ export function AppRouter() {
     case 'product-detail':
       return (
         <AppWrapper {...wrapperProps}>
-          <ProductDetail 
-            productId={state.selectedProductId} 
+          <ProductDetail
+            productId={state.selectedProductId}
             products={state.products}
-            onClose={actions.handleCloseToList} 
-            onUpdateProduct={actions.updateProduct}
+            onClose={actions.handleCloseToList}
+            onUpdateProduct={state.apiActions.updateProduct}
             onEditProduct={actions.handleEditProduct}
             onRefreshProducts={state.refetchProducts}
           />
@@ -156,13 +157,14 @@ export function AppRouter() {
       );
 
     case 'edit-catalog':
+    case 'product-edit':
       return (
         <AppWrapper {...wrapperProps}>
-          <EditCatalogForm 
+          <EditCatalogForm
             productId={state.selectedProductId}
             products={state.products}
             onClose={actions.handleCloseToList}
-            onUpdateProduct={actions.updateProduct}
+            onUpdateProduct={state.apiActions.updateProduct}
           />
         </AppWrapper>
       );

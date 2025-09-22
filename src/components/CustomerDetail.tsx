@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, Phone, Calendar, TrendingUp, Edit3, User, ShoppingBag, Receipt, Clock } from "lucide-react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -6,6 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
 import { formatDate, formatOrderDate } from '../src/utils/date';
+import { useClientDetail } from "../hooks/useDetailData";
+import { adaptBackendClientToCustomer } from "../adapters/dataAdapters";
+import { useIntegratedAppState } from "../hooks/useIntegratedAppState";
+import { toast } from "sonner@2.0.3";
 
 interface Customer {
   id: number;
@@ -33,11 +37,11 @@ interface Order {
 }
 
 interface CustomerDetailProps {
-  customerId: number;
-  customers: Customer[];
+  customerId: number | null;
   onClose: () => void;
-  onUpdateCustomer: (customer: Customer) => void;
+  onUpdateCustomer?: (customer: Customer) => void;
   onViewOrder?: (orderId: string) => void;
+  onRefreshCustomers?: () => void;
 }
 
 
@@ -51,18 +55,63 @@ function formatCurrency(amount: number): string {
 }
 
 
-export function CustomerDetail({ customerId, customers, onClose, onUpdateCustomer, onViewOrder }: CustomerDetailProps) {
-  const customer = customers.find(c => c.id === customerId);
+export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOrder, onRefreshCustomers }: CustomerDetailProps) {
+  // Fetch individual client data
+  const { data: backendClient, loading, error, refetch } = useClientDetail(customerId);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [notes, setNotes] = useState(customer?.notes || '');
+  const [notes, setNotes] = useState('');
 
+  // State and actions
+  const { apiActions } = useIntegratedAppState();
+
+  // Convert backend client to frontend format using useMemo to prevent re-renders
+  const customer = useMemo(() => {
+    return backendClient ? adaptBackendClientToCustomer(backendClient) : null;
+  }, [backendClient]);
+
+  // Initialize notes when customer is loaded
+  useEffect(() => {
+    if (customer) {
+      setNotes(customer.notes || '');
+    }
+  }, [customer?.id, customer?.notes]);
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка клиента...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2 text-red-600">Ошибка загрузки</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg">
+            Вернуться к клиентам
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle customer not found
   if (!customer) {
     return (
-      <div className="bg-white min-h-screen max-w-md mx-auto flex items-center justify-center">
+      <div className="bg-white min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-gray-900 mb-2">Клиент не найден</h2>
-          <Button onClick={onClose} variant="outline">
-            Вернуться к списку
+          <h2 className="mb-2">Клиент не найден</h2>
+          <p className="text-gray-600 mb-4">Клиент с ID {customerId} не существует</p>
+          <Button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg">
+            Вернуться к клиентам
           </Button>
         </div>
       </div>
@@ -87,10 +136,26 @@ export function CustomerDetail({ customerId, customers, onClose, onUpdateCustome
   // В реальном приложении заказы будут загружаться через API
   const customerOrders: Order[] = [];
 
-  const handleSaveNotes = () => {
-    const updatedCustomer = { ...customer, notes };
-    onUpdateCustomer(updatedCustomer);
-    setIsEditingNotes(false);
+  const handleSaveNotes = async () => {
+    if (customer) {
+      try {
+        const customerIdNum = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        // Update client notes through API
+        await apiActions.updateClient(customerIdNum!, { notes });
+
+        setIsEditingNotes(false);
+
+        // Refresh this specific client and the clients list
+        await refetch();
+        await onRefreshCustomers?.();
+
+        toast.success('Заметки обновлены');
+      } catch (error) {
+        console.error('Error updating client notes:', error);
+        toast.error('Ошибка при обновлении заметок');
+      }
+    }
   };
 
   const handleCancelNotes = () => {

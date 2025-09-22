@@ -65,7 +65,25 @@ export const productService = {
   },
 
   async update(id: number, data: ProductUpdate): Promise<Product> {
-    return apiClient.put<Product>(`/api/products/${id}`, data);
+    // Convert arrays to JSON strings for backend compatibility
+    const processedData = { ...data };
+
+    // Convert colors array to JSON string
+    if (Array.isArray(processedData.colors)) {
+      processedData.colors = JSON.stringify(processedData.colors);
+    }
+
+    // Convert images array to JSON string
+    if (Array.isArray(processedData.images)) {
+      processedData.images = JSON.stringify(processedData.images);
+    }
+
+    // Convert composition array to JSON string if present
+    if (Array.isArray(processedData.composition)) {
+      processedData.composition = JSON.stringify(processedData.composition);
+    }
+
+    return apiClient.put<Product>(`/api/products/${id}`, processedData);
   },
 
   async delete(id: number): Promise<void> {

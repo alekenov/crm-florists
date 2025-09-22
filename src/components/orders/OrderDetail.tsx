@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Order } from '../../src/types';
 import { useIntegratedAppState } from '../../hooks/useIntegratedAppState';
+import { useOrderDetail } from '../../hooks/useDetailData';
+import { adaptBackendOrderToOrder } from '../../adapters/dataAdapters';
 
 import { OrderHeader } from './OrderHeader';
 import { OrderContent } from './OrderContent';
@@ -23,13 +25,18 @@ export function OrderDetail({
   onUpdateStatus
 }: OrderDetailProps) {
   // Always call hooks at the top level - never conditionally
-  const { orders, loading, error, apiActions, refetchOrders } = useIntegratedAppState();
+  const { apiActions, refetchOrders } = useIntegratedAppState();
+  const { data: backendOrder, loading, error, refetch } = useOrderDetail(orderId);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Order & { postcardText?: string }>>({});
 
+  // Convert backend order to frontend format using useMemo to prevent infinite re-renders
+  const order = useMemo(() => {
+    return backendOrder ? adaptBackendOrderToOrder(backendOrder) : null;
+  }, [backendOrder]);
+
   // Initialize editData when order is found
   useEffect(() => {
-    const order = orders?.find(o => o.id === orderId);
     if (order) {
       setEditData({
         address: order.deliveryAddress,  // Changed from deliveryAddress to address
@@ -43,7 +50,7 @@ export function OrderDetail({
         senderPhone: order.sender?.phone || '',
       });
     }
-  }, [orderId, orders]);
+  }, [order?.id, order?.deliveryAddress, order?.deliveryDate, order?.deliveryTimeRange, order?.comment, order?.notes, order?.recipient?.name, order?.recipient?.phone, order?.sender?.name, order?.sender?.phone]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -60,8 +67,7 @@ export function OrderDetail({
     };
   }, []);
 
-  // Find order from global state
-  const order = orders?.find(o => o.id === orderId) || null;
+  // Order is now fetched directly by ID and converted to frontend format above
 
   // Event handlers using simplified logic
   const handleEdit = () => {
@@ -166,7 +172,8 @@ export function OrderDetail({
       // Update local state
       setIsEditing(false);
 
-      // Refresh orders list to get updated data
+      // Refresh this specific order and the orders list
+      await refetch();
       await refetchOrders();
 
       toast.success('Изменения успешно сохранены');
@@ -204,6 +211,7 @@ export function OrderDetail({
         executor_id: executorId
       });
 
+      await refetch();
       await refetchOrders();
 
       const message = executorId === null
@@ -225,6 +233,7 @@ export function OrderDetail({
         courier_id: courierIdNum
       });
 
+      await refetch();
       await refetchOrders();
 
       const message = courierIdNum === null

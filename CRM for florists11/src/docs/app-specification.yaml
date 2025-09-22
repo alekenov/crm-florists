@@ -1,0 +1,363 @@
+# 🌸 Цветочный магазин - Техническая спецификация
+
+metadata:
+  name: "Цветочный магазин"
+  version: "1.0.0"
+  description: "Мобильное приложение для управления цветочным магазином"
+  platform: "Web (React + TypeScript)"
+  architecture: "Autonomous SPA"
+  date_created: "2025-09-21"
+  
+architecture:
+  type: "Single Page Application"
+  storage: "localStorage"
+  state_management: "Custom hooks + localStorage"
+  ui_framework: "React 18 + TypeScript"
+  styling: "Tailwind CSS v4 + shadcn/ui"
+  responsive: "Mobile-first с desktop enhancement"
+  
+tech_stack:
+  frontend:
+    - React 18
+    - TypeScript
+    - Tailwind CSS v4
+    - shadcn/ui components
+    - Lucide React icons
+    - Vite (build tool)
+  
+  state_management:
+    - useAppState (global state)
+    - useAppActions (global actions)
+    - useLocalStorage (persistence)
+    - Custom hooks для routing
+  
+  data_layer:
+    - localStorage API
+    - Mock data для development
+    - JSON структуры данных
+    - TypeScript interfaces
+
+core_features:
+  products:
+    description: "Управление товарами цветочного магазина"
+    types:
+      vitrina:
+        description: "Простая форма товара для витрины"
+        fields: [title, price, image, width, height]
+      catalog:
+        description: "Расширенная форма товара для каталога"
+        fields: [title, price, images, video, duration, discount, composition, colors, catalogWidth, catalogHeight, productionTime]
+    features:
+      - Добавление товаров (витрина/каталог)
+      - Редактирование товаров
+      - Переключение статуса (активен/неактивен)
+      - Поиск и фильтрация
+      - Детальный просмотр
+      - Загрузка изображений
+
+  orders:
+    description: "Управление заказами клиентов"
+    statuses: [new, paid, accepted, assembled, in-transit, completed]
+    workflow: "Линейный процесс обработки заказов"
+    features:
+      - Создание заказов
+      - Отслеживание статусов
+      - Привязка к клиентам
+      - Состав заказа (товары + количество)
+      - История изменений
+      - Поиск и фильтрация
+
+  inventory:
+    description: "Управление складом и инвентаризация"
+    features:
+      - Учет товаров на складе
+      - Поставки (batch processing)
+      - Инвентаризация с audit trail
+      - Контроль минимальных остатков
+      - Управление поставщиками
+      - Отслеживание сроков годности
+
+  customers:
+    description: "Управление клиентской базой (privacy-first)"
+    privacy_policy: "Сбор только необходимых данных"
+    required_fields: [phone]
+    optional_fields: [name, notes]
+    forbidden_fields: [email, address, personal_data]
+    features:
+      - Добавление клиентов
+      - История заказов
+      - Статистика покупок
+      - Статусы клиентов (active, vip, inactive)
+      - Поиск по телефону/имени
+
+  profile:
+    description: "Профиль администратора и настройки"
+    features:
+      - Информация о магазине
+      - Контактные данные
+      - Рабочие часы
+      - Дашборд со статистикой
+      - Настройки приложения
+
+ui_design_system:
+  responsive_strategy:
+    approach: "Mobile-first"
+    breakpoints:
+      mobile: "< 1024px"
+      desktop: ">= 1024px"
+    
+  mobile_design:
+    navigation: "Bottom tab bar"
+    layout: "Single column, stacked"
+    touch_targets: "48px minimum"
+    gestures: "Thumb-friendly navigation"
+    patterns:
+      - "Full-screen modals"
+      - "Pull-to-refresh"
+      - "Swipe gestures"
+      - "Collapsible sections"
+  
+  desktop_enhancement:
+    navigation: "Sidebar + top navigation"
+    layout: "Multi-column, cards"
+    interactions: "Mouse hover states"
+    patterns:
+      - "Data tables"
+      - "Modal dialogs"
+      - "Drag & drop"
+      - "Keyboard shortcuts"
+
+  typography:
+    base_size: "14px (mobile), 16px (desktop)"
+    scale: "Automatic via globals.css"
+    weights: [normal: 400, medium: 500]
+    line_height: "1.5 для всех элементов"
+    restrictions: "Запрет на font-size/weight классы Tailwind"
+
+  color_palette:
+    primary: "#7c3aed (purple)"
+    background: "#ffffff"
+    input_background: "#f3f3f5"
+    border: "rgba(0, 0, 0, 0.1)"
+    status_colors:
+      active: "green-100/700"
+      inactive: "gray-100/600"
+      vip: "purple-100/700"
+      pending: "yellow-100/700"
+      completed: "blue-100/700"
+
+  components:
+    forms:
+      mobile: "Borderless inputs with bottom border"
+      desktop: "Traditional bordered inputs"
+      validation: "Real-time с shadcn/ui"
+    
+    navigation:
+      mobile: "Fixed bottom tab bar"
+      desktop: "Collapsible sidebar"
+    
+    data_display:
+      mobile: "Card-based lists"
+      desktop: "Tables с hover states"
+
+data_structure:
+  storage_format: "JSON в localStorage"
+  
+  entities:
+    products:
+      key: "flower_shop_products"
+      structure: "Array<Product>"
+      
+    orders:
+      key: "flower_shop_orders"
+      structure: "Array<Order>"
+      
+    inventory:
+      key: "flower_shop_inventory"
+      structure: "Array<InventoryItem>"
+      
+    customers:
+      key: "flower_shop_customers"
+      structure: "Array<Customer>"
+      
+    profile:
+      key: "flower_shop_profile"
+      structure: "AdminProfile"
+
+  relationships:
+    - "Order.items -> Product.id"
+    - "Order.customerPhone -> Customer.phone"
+    - "Product.composition -> InventoryItem.name"
+
+state_management:
+  global_hooks:
+    useAppState:
+      purpose: "Централизованное состояние приложения"
+      data: [products, orders, inventory, customers, profile]
+      ui_state: [currentScreen, activeTab, selectedIds]
+      loading_state: [loading, error, refetch functions]
+    
+    useAppActions:
+      purpose: "Действия над данными"
+      operations: [create, update, delete, toggle]
+      persistence: "Автоматическое сохранение в localStorage"
+    
+    useAppRouterActions:
+      purpose: "Навигация и routing"
+      screens: [main, selector, forms, details]
+      tab_management: "Синхронизация с URL"
+
+  local_hooks:
+    useLocalStorage:
+      purpose: "Прямая работа с localStorage"
+      features: [get, set, remove, listen]
+    
+    component_state:
+      purpose: "UI состояние компонентов"
+      examples: [form inputs, modals, dropdowns]
+
+routing_system:
+  type: "Client-side routing"
+  implementation: "Custom hook-based router"
+  
+  screens:
+    main: "Основной экран с табами"
+    selector: "Выбор типа товара"
+    vitrina-form: "Форма товара витрины"
+    catalog-form: "Форма товара каталога"
+    product-detail: "Детали товара"
+    edit-catalog: "Редактирование каталога"
+    order-detail: "Детали заказа"
+    add-order: "Создание заказа"
+    inventory-item-detail: "Детали товара склада"
+    inventory-audit: "Инвентаризация"
+    add-inventory-item: "Добавление на склад"
+    customer-detail: "Детали клиента"
+    add-customer: "Добавление клиента"
+    dashboard: "Дашборд администратора"
+
+  tabs:
+    orders: "Заказы"
+    products: "Товары"
+    inventory: "Склад"
+    customers: "Клиенты"
+    profile: "Профиль"
+
+business_rules:
+  product_management:
+    - "Два типа товаров: витрина (простая) и каталог (расширенная)"
+    - "Цены за единицу товара в составе букета берутся из инвентаря"
+    - "Цветовая палитра: круглые цветные иконки"
+    - "Время изготовления: селектируемые теги"
+    - "Обязательные поля: название, цена, тип"
+
+  order_workflow:
+    - "Строгий порядок статусов: new → paid → accepted → assembled → in-transit → completed"
+    - "Невозможно пропустить статусы"
+    - "История изменений ведется автоматически"
+    - "Обязательна привязка к клиенту (телефон)"
+
+  customer_privacy:
+    - "Имя клиента - опциональное поле"
+    - "Телефон - обязательное поле"
+    - "Email не собирается"
+    - "Адрес не требуется"
+    - "Минимальный набор персональных данных"
+
+  inventory_control:
+    - "Автоматическое списание при заказах"
+    - "Контроль минимальных остатков"
+    - "Inвентаризация с audit trail"
+    - "Batch processing для поставок"
+
+performance:
+  optimization:
+    - "React.memo для дорогих компонентов"
+    - "useMemo для тяжелых вычислений"
+    - "useCallback для стабильных функций"
+    - "Lazy loading для больших компонентов"
+    - "Debounce для поиска"
+
+  metrics:
+    bundle_size: "< 500KB gzipped"
+    initial_load: "< 2 seconds"
+    localStorage_limit: "< 5MB"
+    memory_usage: "< 50MB"
+
+security:
+  data_protection:
+    - "Данные хранятся только локально"
+    - "Нет передачи на внешние серверы"
+    - "Privacy-first approach"
+    - "Минимизация сбора данных"
+
+  validation:
+    - "Client-side валидация всех форм"
+    - "TypeScript type checking"
+    - "Sanitization пользовательского ввода"
+    - "Error boundaries для React"
+
+testing_strategy:
+  unit_tests:
+    - "Hooks testing с React Testing Library"
+    - "Component testing"
+    - "Utility functions testing"
+    - "Type safety validation"
+
+  integration_tests:
+    - "User flow testing"
+    - "localStorage persistence"
+    - "Cross-browser compatibility"
+    - "Mobile responsiveness"
+
+deployment:
+  build_tool: "Vite"
+  target: "Static files (HTML, CSS, JS)"
+  hosting: "Any static hosting (Vercel, Netlify, etc.)"
+  requirements: "Modern browser с ES6+ support"
+
+browser_support:
+  modern_browsers: ">= 2 years old"
+  mobile_browsers:
+    - "Safari iOS >= 14"
+    - "Chrome Android >= 90"
+    - "Samsung Internet >= 14"
+  desktop_browsers:
+    - "Chrome >= 90"
+    - "Firefox >= 88"
+    - "Safari >= 14"
+    - "Edge >= 90"
+
+accessibility:
+  standards: "WCAG 2.1 Level AA"
+  features:
+    - "Keyboard navigation"
+    - "Screen reader support"
+    - "High contrast mode"
+    - "Touch accessibility"
+    - "Focus management"
+
+monitoring:
+  error_tracking: "React Error Boundaries"
+  performance: "Web Vitals"
+  usage_analytics: "Local storage usage"
+  user_feedback: "В приложении feedback форма"
+
+future_enhancements:
+  v1_1:
+    - "PWA support"
+    - "Offline functionality"
+    - "Push notifications"
+    - "Export/import данных"
+    
+  v1_2:
+    - "Multi-language support"
+    - "Dark theme"
+    - "Advanced analytics"
+    - "Integration с payment systems"
+    
+  v2_0:
+    - "Backend integration"
+    - "Multi-user support"
+    - "Real-time updates"
+    - "Mobile app (React Native)"

@@ -16,6 +16,7 @@ export type Screen =
   | "vitrina-form"
   | "catalog-form"
   | "edit-catalog"
+  | "product-edit"
   | "selector"
   | "order-detail"
   | "add-order"

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Input } from "./ui/input";
 import { Check } from "lucide-react";
+import { Inventory } from "../api/types";
 
-// Популярные названия цветков для автокомплита
-const popularFlowers = [
+// Fallback список популярных цветов на случай если API недоступен
+const fallbackFlowers = [
   "Розы",
-  "Тюльпаны", 
+  "Тюльпаны",
   "Пионы",
   "Хризантемы",
   "Лилии",
@@ -26,37 +27,76 @@ const popularFlowers = [
   "Астры"
 ];
 
+interface FlowerOption {
+  name: string;
+  quantity?: number;
+  price?: number;
+  fromInventory?: boolean;
+}
+
 interface FlowerNameInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   existingFlowers?: string[]; // цветки из текущих товаров
+  inventory?: Inventory[]; // данные со склада
+  loading?: boolean;
 }
 
-export function FlowerNameInput({ 
-  value, 
-  onChange, 
+export function FlowerNameInput({
+  value,
+  onChange,
   placeholder = "Название цветка",
   className = "",
-  existingFlowers = []
+  existingFlowers = [],
+  inventory = [],
+  loading = false
 }: FlowerNameInputProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [filteredOptions, setFilteredOptions] = useState<string[]>([]);
+  const [filteredOptions, setFilteredOptions] = useState<FlowerOption[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Комбинируем популярные цветы с существующими, убираем дубликаты
-  // Ставим существующие цветки в начало для приоритета  
-  const allOptions = useMemo(() => 
-    [...new Set([...existingFlowers, ...popularFlowers])], 
-    [existingFlowers]
-  );
+  // Преобразуем данные инвентаря в опции для выбора
+  const allOptions = useMemo(() => {
+    const options: FlowerOption[] = [];
+
+    // Добавляем цветы из инвентаря с количеством и ценой
+    if (inventory && inventory.length > 0) {
+      inventory.forEach(item => {
+        options.push({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          fromInventory: true
+        });
+      });
+    }
+
+    // Добавляем существующие цветы из товаров (если их нет в инвентаре)
+    existingFlowers.forEach(flower => {
+      if (!options.some(opt => opt.name.toLowerCase() === flower.toLowerCase())) {
+        options.push({ name: flower, fromInventory: false });
+      }
+    });
+
+    // Если инвентарь пустой, используем fallback список
+    if (inventory.length === 0 && !loading) {
+      fallbackFlowers.forEach(flower => {
+        if (!options.some(opt => opt.name.toLowerCase() === flower.toLowerCase())) {
+          options.push({ name: flower, fromInventory: false });
+        }
+      });
+    }
+
+    return options;
+  }, [existingFlowers, inventory, loading]);
 
   useEffect(() => {
     if (value.trim()) {
-      const filtered = allOptions.filter(flower =>
-        flower.toLowerCase().includes(value.toLowerCase())
+      const filtered = allOptions.filter(option =>
+        option.name.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredOptions(filtered);
     } else {
@@ -70,8 +110,8 @@ export function FlowerNameInput({
     setIsOpen(true);
   };
 
-  const handleSelectOption = (option: string) => {
-    onChange(option);
+  const handleSelectOption = (optionName: string) => {
+    onChange(optionName);
     setIsOpen(false);
     inputRef.current?.blur();
   };
@@ -102,32 +142,57 @@ export function FlowerNameInput({
       />
 
       {isOpen && (
-        <div 
+        <div
           ref={dropdownRef}
           className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
         >
-          {!value.trim() && (
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-              <span className="text-xs text-gray-500 font-medium">💡 Популярные варианты</span>
+          {loading && (
+            <div className="px-4 py-3 text-center text-gray-500">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
+              <span className="text-xs mt-2 block">Загрузка цветов со склада...</span>
             </div>
           )}
-          
-          {filteredOptions.slice(0, 10).map((option, index) => {
-            const isExisting = existingFlowers.includes(option);
-            
+
+          {!loading && !value.trim() && (
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+              <span className="text-xs text-gray-500 font-medium">
+                {inventory.length > 0 ? '📦 Цветы со склада' : '💡 Популярные варианты'}
+              </span>
+            </div>
+          )}
+
+          {!loading && filteredOptions.slice(0, 10).map((option, index) => {
+            const isExisting = existingFlowers.includes(option.name);
+
             return (
               <button
                 key={index}
                 type="button"
-                onClick={() => handleSelectOption(option)}
+                onClick={() => handleSelectOption(option.name)}
                 className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between group touch-manipulation"
               >
-                <span className="text-gray-900">{option}</span>
+                <div className="flex-1">
+                  <span className="text-gray-900">{option.name}</span>
+                  {option.fromInventory && (
+                    <div className="flex items-center gap-3 mt-1">
+                      {option.quantity !== undefined && (
+                        <span className="text-xs text-gray-500">
+                          На складе: {option.quantity} шт
+                        </span>
+                      )}
+                      {option.price !== undefined && (
+                        <span className="text-xs text-gray-500">
+                          Цена: {option.price} ₸
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center space-x-2">
-                  {value.toLowerCase() === option.toLowerCase() && (
+                  {value.toLowerCase() === option.name.toLowerCase() && (
                     <Check className="w-4 h-4 text-purple-600" />
                   )}
-                  {isExisting && value.toLowerCase() !== option.toLowerCase() && (
+                  {isExisting && value.toLowerCase() !== option.name.toLowerCase() && (
                     <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
                       Уже в составе
                     </span>
@@ -136,9 +201,9 @@ export function FlowerNameInput({
               </button>
             );
           })}
-          
+
           {/* Опция для добавления нового названия */}
-          {value.trim() && !allOptions.some(opt => opt.toLowerCase() === value.toLowerCase()) && (
+          {!loading && value.trim() && !allOptions.some(opt => opt.name.toLowerCase() === value.toLowerCase()) && (
             <button
               type="button"
               onClick={() => handleSelectOption(value)}
@@ -149,7 +214,7 @@ export function FlowerNameInput({
             </button>
           )}
 
-          {filteredOptions.length === 0 && value.trim() && (
+          {!loading && filteredOptions.length === 0 && value.trim() && (
             <div className="px-4 py-3 text-gray-500 text-center">
               <p className="text-sm">Не найдено подходящих вариантов</p>
               <button
@@ -161,11 +226,13 @@ export function FlowerNameInput({
               </button>
             </div>
           )}
-          
-          {filteredOptions.length === 0 && !value.trim() && (
+
+          {!loading && filteredOptions.length === 0 && !value.trim() && (
             <div className="px-4 py-8 text-center text-gray-400">
               <p className="text-sm">Начните вводить название цветка</p>
-              <p className="text-xs mt-1">или выберите из популярных вариантов</p>
+              <p className="text-xs mt-1">
+                {inventory.length > 0 ? 'или выберите из цветов на складе' : 'или выберите из популярных вариантов'}
+              </p>
             </div>
           )}
         </div>

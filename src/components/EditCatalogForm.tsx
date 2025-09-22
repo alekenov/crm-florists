@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { ImageUploader } from "./ImageUploader";
 import { FlowerNameInput } from "./FlowerNameInput";
 import { ColorPicker } from "./common/ColorPicker";
+import { useInventoryList } from "../hooks/useInventoryList";
 
 interface Product {
   id: number;
@@ -42,7 +43,7 @@ interface EditCatalogFormProps {
   productId: number | null;
   products: Product[];
   onClose: () => void;
-  onUpdateProduct: (product: Product) => void;
+  onUpdateProduct: (id: number, data: Partial<Product>) => Promise<Product>;
 }
 
 function CameraIcon() {
@@ -113,12 +114,14 @@ export function EditCatalogForm({
   const [composition, setComposition] = useState<
     Array<{ name: string; count: string }>
   >([]);
-  const [catalogWidth, setCatalogWidth] = useState("");
-  const [catalogHeight, setCatalogHeight] = useState("");
+  const [width, setWidth] = useState("");
+  const [height, setHeight] = useState("");
   const [newFlowerName, setNewFlowerName] = useState("");
   const [newFlowerCount, setNewFlowerCount] = useState("");
   const [images, setImages] = useState<string[]>([]);
 
+  // Загружаем список цветов со склада
+  const { inventory, loading: inventoryLoading, error: inventoryError } = useInventoryList();
 
   useEffect(() => {
     if (productId) {
@@ -127,15 +130,18 @@ export function EditCatalogForm({
       );
       if (foundProduct) {
         setProduct(foundProduct);
-        setTitle(foundProduct.title);
-        setPrice(foundProduct.price.replace(" ₸", ""));
-        setDuration(foundProduct.duration || "");
+        setTitle(foundProduct.name || foundProduct.title);  // Support both name and title
+        setPrice(foundProduct.price.toString().replace(" ₸", ""));
+        // Convert preparation_time to string if it's a number
+        const prepTime = foundProduct.preparation_time || foundProduct.duration;
+        setDuration(prepTime ? prepTime.toString() : "");  // Backend uses preparation_time
         setDiscount(foundProduct.discount || "");
         setComposition(foundProduct.composition || []);
         setSelectedColors(foundProduct.colors || []);
-        setCatalogWidth(foundProduct.catalogWidth || "");
-        setCatalogHeight(foundProduct.catalogHeight || "");
-        setSelectedDuration(foundProduct.productionTime || "");
+        // Ensure width and height are strings
+        setWidth(foundProduct.width ? foundProduct.width.toString() : "");
+        setHeight(foundProduct.height ? foundProduct.height.toString() : "");
+        setSelectedDuration(foundProduct.production_time || "");
         setImages(foundProduct.images || [foundProduct.image]);
       }
     }
@@ -169,23 +175,22 @@ export function EditCatalogForm({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (product) {
-      const updatedProduct: Product = {
-        ...product,
-        title,
-        price: `${price} ₸`,
-        duration,
-        discount,
+      const updateData = {
+        name: title,  // Backend expects 'name', not 'title'
+        price: parseFloat(price) || 0,
+        preparation_time: duration ? parseFloat(duration) : undefined,  // Backend field name
+        discount: discount ? parseFloat(discount) : undefined,
         composition,
         colors: selectedColors,
-        catalogWidth,
-        catalogHeight,
-        productionTime: selectedDuration,
+        width,
+        height,
+        production_time: selectedDuration,  // Backend field name with underscore
         images: images,
-        image: images[0] || product.image, // обновляем главное изображение
+        image_url: images[0] || product.image, // Backend expects 'image_url'
       };
-      onUpdateProduct(updatedProduct);
+      await onUpdateProduct(product.id, updateData);
       onClose();
     }
   };
@@ -323,7 +328,7 @@ export function EditCatalogForm({
                             {item.name}
                           </span>
                           <span className="text-gray-500 ml-2 lg:text-sm">
-                            — {item.count} шт
+                            — {item.quantity || item.count} шт
                           </span>
                         </div>
                         <button
@@ -345,6 +350,8 @@ export function EditCatalogForm({
                       placeholder="Название цветка"
                       className="border-0 border-b border-gray-200 rounded-none px-0 pb-3 h-12 text-base placeholder:text-gray-500 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 w-full touch-manipulation lg:border lg:border-gray-200 lg:rounded-lg lg:px-3 lg:h-10 lg:bg-white lg:text-sm"
                       existingFlowers={composition.map(item => item.name)}
+                      inventory={inventory}
+                      loading={inventoryLoading}
                     />
                   </div>
                   <div className="w-20 lg:w-full lg:col-span-1">
@@ -410,9 +417,9 @@ export function EditCatalogForm({
                       Ширина
                     </label>
                     <Input
-                      value={catalogWidth}
+                      value={width}
                       onChange={(e) =>
-                        setCatalogWidth(e.target.value)
+                        setWidth(e.target.value)
                       }
                       placeholder="Ширина, см"
                       className="border-0 border-b border-gray-200 rounded-none px-0 pb-3 h-12 text-base placeholder:text-gray-500 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 touch-manipulation lg:border lg:border-gray-200 lg:rounded-lg lg:px-3 lg:h-10 lg:bg-white"
@@ -423,9 +430,9 @@ export function EditCatalogForm({
                       Высота
                     </label>
                     <Input
-                      value={catalogHeight}
+                      value={height}
                       onChange={(e) =>
-                        setCatalogHeight(e.target.value)
+                        setHeight(e.target.value)
                       }
                       placeholder="Высота, см"
                       className="border-0 border-b border-gray-200 rounded-none px-0 pb-3 h-12 text-base placeholder:text-gray-500 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 touch-manipulation lg:border lg:border-gray-200 lg:rounded-lg lg:px-3 lg:h-10 lg:bg-white"

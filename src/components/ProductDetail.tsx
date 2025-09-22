@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ArrowLeft, Edit, ExternalLink, Copy, Check, Share } from "lucide-react";
 import { useAppActions } from "../src/hooks/useAppActions";
 import { useIntegratedAppState } from "../hooks/useIntegratedAppState";
+import { useProductDetail } from "../hooks/useDetailData";
+import { adaptBackendProductToProduct } from "../adapters/dataAdapters";
 import { Product } from "../src/types";
 import { toast } from "sonner@2.0.3";
 
@@ -37,7 +39,8 @@ const getProductionTimeLabel = (time: string) => {
 };
 
 export function ProductDetail({ productId, products, onClose, onUpdateProduct, onEditProduct, onRefreshProducts }: ProductDetailProps) {
-  const [product, setProduct] = useState<Product | null>(null);
+  // Fetch individual product data
+  const { data: backendProduct, loading, error, refetch } = useProductDetail(productId);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPrice, setEditedPrice] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
@@ -47,26 +50,76 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
   const state = useIntegratedAppState();
   const actions = useAppActions(state);
 
-  useEffect(() => {
-    if (productId) {
-      const foundProduct = products.find(p => p.id === productId);
-      if (foundProduct) {
-        setProduct(foundProduct);
-        setEditedPrice(foundProduct.price.replace(' ₸', ''));
-      }
-    }
-  }, [productId, products]);
+  // Convert backend product to frontend format using useMemo to prevent re-renders
+  const product = useMemo(() => {
+    return backendProduct ? adaptBackendProductToProduct(backendProduct) : null;
+  }, [backendProduct]);
 
-  if (!product) {
-    return null;
+  // Initialize editedPrice when product is loaded
+  useEffect(() => {
+    if (product) {
+      setEditedPrice(product.price.replace(' ₸', ''));
+    }
+  }, [product?.id, product?.price]);
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка товара...</p>
+        </div>
+      </div>
+    );
   }
 
-  const handleSavePrice = () => {
+  // Handle error state
+  if (error) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2 text-red-600">Ошибка загрузки</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg">
+            Вернуться к товарам
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle product not found
+  if (!product) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2">Товар не найден</h2>
+          <p className="text-gray-600 mb-4">Товар с ID {productId} не существует</p>
+          <Button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg">
+            Вернуться к товарам
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSavePrice = async () => {
     if (product) {
-      const updatedProduct = { ...product, price: `${editedPrice} ₸` };
-      setProduct(updatedProduct);
-      onUpdateProduct(updatedProduct);
-      setIsEditing(false);
+      try {
+        // Use products service to update just the price
+        const { products } = await import('../api/services');
+        await products.update(product.id, { price: parseFloat(editedPrice) || 0 });
+
+        setIsEditing(false);
+        // Refresh the individual product data
+        await refetch();
+        await onRefreshProducts();
+        toast.success('Цена товара обновлена');
+      } catch (error) {
+        console.error('Error updating product price:', error);
+        toast.error('Ошибка при обновлении цены');
+      }
     }
   };
 
@@ -152,10 +205,10 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
       )}
 
       {/* Срок изготовления */}
-      {product.duration && (
+      {(product.preparation_time || product.duration) && (
         <div className="py-4 border-b border-gray-200">
           <div className="text-sm text-gray-600 mb-2">Срок изготовления</div>
-          <div className="text-gray-900">{product.duration} минут</div>
+          <div className="text-gray-900">{product.preparation_time || product.duration} минут</div>
         </div>
       )}
 
@@ -167,7 +220,7 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
             {product.composition.map((item, index) => (
               <div key={index} className="flex justify-between items-center">
                 <span className="text-gray-700">{item.name}</span>
-                <span className="text-gray-900">{item.count} шт</span>
+                <span className="text-gray-900">{item.quantity || item.count} шт</span>
               </div>
             ))}
           </div>
@@ -204,28 +257,28 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
           )}
 
           {/* Размеры */}
-          {(product.catalogWidth || product.catalogHeight) && (
+          {(product.width || product.height) && (
             <div className="flex space-x-6">
-              {product.catalogWidth && (
+              {product.width && (
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Ширина</div>
-                  <div className="text-gray-900">{product.catalogWidth} см</div>
+                  <div className="text-gray-900">{product.width} см</div>
                 </div>
               )}
-              {product.catalogHeight && (
+              {product.height && (
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Высота</div>
-                  <div className="text-gray-900">{product.catalogHeight} см</div>
+                  <div className="text-gray-900">{product.height} см</div>
                 </div>
               )}
             </div>
           )}
 
           {/* Стойкость */}
-          {product.productionTime && (
+          {product.production_time && (
             <div>
               <div className="text-sm text-gray-600 mb-1">Стойкость</div>
-              <div className="text-gray-900">{getProductionTimeLabel(product.productionTime)}</div>
+              <div className="text-gray-900">{getProductionTimeLabel(product.production_time)}</div>
             </div>
           )}
         </div>
@@ -336,19 +389,17 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
 
         </div>
 
-        {/* Кнопка редактирования для каталога */}
-        {product.type === 'catalog' && onEditProduct && (
-          <div className="py-6 space-y-3 px-4 lg:px-8 lg:max-w-4xl lg:mx-auto">
-            <div className="lg:flex lg:justify-end">
-              <Button 
-                className="w-full h-12 bg-gray-800 hover:bg-gray-900 text-white lg:w-auto lg:px-6"
-                onClick={() => onEditProduct(product.id)}
-              >
-                Редактировать
-              </Button>
-            </div>
+        {/* Кнопка редактирования для всех товаров */}
+        <div className="py-6 space-y-3 px-4 lg:px-8 lg:max-w-4xl lg:mx-auto">
+          <div className="lg:flex lg:justify-end">
+            <Button
+              className="w-full h-12 bg-gray-800 hover:bg-gray-900 text-white lg:w-auto lg:px-6"
+              onClick={() => window.location.href = `/products/${product.id}/edit`}
+            >
+              Редактировать
+            </Button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
