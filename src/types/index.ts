@@ -87,7 +87,7 @@ export interface OrderHistoryItem {
 export interface Order {
   id: string;
   number: string;
-  status: "new" | "paid" | "assembled" | "completed" | "accepted" | "in-transit";
+  status: "NEW" | "IN_WORK" | "READY" | "DELIVERED" | "PAID" | "COLLECTED" | "CANCELED";
   createdAt: Date;
   updatedAt?: Date;
   mainProduct?: Product;

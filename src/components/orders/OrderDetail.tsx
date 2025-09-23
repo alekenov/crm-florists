@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Order } from '../../src/types';
+import React, { useState, useEffect } from 'react';
+import { ApiOrder } from '../../types/api';
 import { useIntegratedAppState } from '../../hooks/useIntegratedAppState';
-import { useOrderDetail } from '../../hooks/useDetailData';
-import { adaptBackendOrderToOrder } from '../../adapters/dataAdapters';
+import { useApiOrderDetail } from '../../hooks/useApiOrderDetail';
 
 import { OrderHeader } from './OrderHeader';
 import { OrderContent } from './OrderContent';
@@ -26,31 +25,26 @@ export function OrderDetail({
 }: OrderDetailProps) {
   // Always call hooks at the top level - never conditionally
   const { apiActions, refetchOrders } = useIntegratedAppState();
-  const { data: backendOrder, loading, error, refetch } = useOrderDetail(orderId);
+  const { order, loading, error, refetch } = useApiOrderDetail(orderId);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<Partial<Order & { postcardText?: string }>>({});
-
-  // Convert backend order to frontend format using useMemo to prevent infinite re-renders
-  const order = useMemo(() => {
-    return backendOrder ? adaptBackendOrderToOrder(backendOrder) : null;
-  }, [backendOrder]);
+  const [editData, setEditData] = useState<Partial<ApiOrder & { postcardText?: string }>>({});
 
   // Initialize editData when order is found
   useEffect(() => {
     if (order) {
       setEditData({
-        address: order.deliveryAddress,  // Changed from deliveryAddress to address
-        deliveryDate: order.deliveryDate,
-        deliveryTimeRange: order.deliveryTimeRange,
+        delivery_address: order.delivery_address,
+        delivery_date: order.delivery_date,
+        delivery_time_range: order.delivery_time_range,
         comment: order.comment,
         postcardText: order.notes || '',
         recipientName: order.recipient?.name || '',
         recipientPhone: order.recipient?.phone || '',
-        senderName: order.sender?.name || '',
-        senderPhone: order.sender?.phone || '',
+        senderName: order.client?.name || '',
+        senderPhone: order.client?.phone || '',
       });
     }
-  }, [order?.id, order?.deliveryAddress, order?.deliveryDate, order?.deliveryTimeRange, order?.comment, order?.notes, order?.recipient?.name, order?.recipient?.phone, order?.sender?.name, order?.sender?.phone]);
+  }, [order?.id, order?.delivery_address, order?.delivery_date, order?.delivery_time_range, order?.comment, order?.notes, order?.recipient?.name, order?.recipient?.phone, order?.client?.name, order?.client?.phone]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -74,15 +68,15 @@ export function OrderDetail({
     if (order) {
       setIsEditing(true);
       setEditData({
-        address: order.deliveryAddress,  // Changed from deliveryAddress to address
-        deliveryDate: order.deliveryDate,
-        deliveryTimeRange: order.deliveryTimeRange,
+        delivery_address: order.delivery_address,
+        delivery_date: order.delivery_date,
+        delivery_time_range: order.delivery_time_range,
         comment: order.comment,
         postcardText: order.notes || '',
         recipientName: order.recipient?.name || '',
         recipientPhone: order.recipient?.phone || '',
-        senderName: order.sender?.name || '',
-        senderPhone: order.sender?.phone || '',
+        senderName: order.client?.name || '',
+        senderPhone: order.client?.phone || '',
       });
     }
   };
@@ -101,35 +95,15 @@ export function OrderDetail({
       if (editData.postcardText !== undefined) {
         updateData.notes = editData.postcardText;
       }
-      if (editData.address !== undefined) {
-        updateData.delivery_address = editData.address;  // Changed from editData.deliveryAddress to editData.address
+      if (editData.delivery_address !== undefined) {
+        updateData.delivery_address = editData.delivery_address;
       }
-      if (editData.deliveryTimeRange !== undefined) {
-        updateData.delivery_time_range = editData.deliveryTimeRange;
+      if (editData.delivery_time_range !== undefined) {
+        updateData.delivery_time_range = editData.delivery_time_range;
       }
-      if (editData.deliveryDate !== undefined) {
-        // Convert Russian date strings to ISO date
-        const today = new Date();
-        let deliveryDate: Date;
-
-        if (editData.deliveryDate === 'Сегодня') {
-          deliveryDate = today;
-        } else if (editData.deliveryDate === 'Завтра') {
-          deliveryDate = new Date(today);
-          deliveryDate.setDate(deliveryDate.getDate() + 1);
-        } else if (editData.deliveryDate === 'Послезавтра') {
-          deliveryDate = new Date(today);
-          deliveryDate.setDate(deliveryDate.getDate() + 2);
-        } else if (editData.deliveryDate.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
-          // Handle DD.MM.YYYY format
-          const [day, month, year] = editData.deliveryDate.split('.');
-          deliveryDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        } else {
-          // Try to parse as is (ISO format or other)
-          deliveryDate = new Date(editData.deliveryDate);
-        }
-
-        updateData.delivery_date = deliveryDate.toISOString();
+      if (editData.delivery_date !== undefined) {
+        // Send Russian date strings directly to backend
+        updateData.delivery_date = editData.delivery_date;
       }
 
       // Update recipient data if changed
@@ -149,19 +123,19 @@ export function OrderDetail({
         }
       }
 
-      // Update sender data if changed
+      // Update client (sender) data if changed
       if (editData.senderName !== undefined || editData.senderPhone !== undefined) {
-        if (order && order.sender) {
-          const senderUpdateData: any = {};
-          if (editData.senderName !== undefined && editData.senderName !== order.sender.name) {
-            senderUpdateData.name = editData.senderName;
+        if (order && order.client) {
+          const clientUpdateData: any = {};
+          if (editData.senderName !== undefined && editData.senderName !== order.client.name) {
+            clientUpdateData.name = editData.senderName;
           }
-          if (editData.senderPhone !== undefined && editData.senderPhone !== order.sender.phone) {
-            senderUpdateData.phone = editData.senderPhone;
+          if (editData.senderPhone !== undefined && editData.senderPhone !== order.client.phone) {
+            clientUpdateData.phone = editData.senderPhone;
           }
 
-          if (Object.keys(senderUpdateData).length > 0) {
-            await apiActions.updateClient(order.sender.id, senderUpdateData);
+          if (Object.keys(clientUpdateData).length > 0) {
+            await apiActions.updateClient(order.client.id, clientUpdateData);
           }
         }
       }
@@ -192,13 +166,26 @@ export function OrderDetail({
     setEditData(prev => ({ ...prev, [field]: value }));
   };
 
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
   const handleStatusChange = async (newStatus: string) => {
     try {
-      toast.success(`Статус изменен на "${newStatus}"`);
+      // Prevent duplicate calls
+      if (isUpdatingStatus) return;
+      setIsUpdatingStatus(true);
+
       // Pass both orderId and newStatus
-      onUpdateStatus?.(orderId, newStatus);
+      await onUpdateStatus?.(orderId, newStatus);
+
+      // Refresh order data to show updated status
+      await refetch();
+      await refetchOrders();
+
+      toast.success(`Статус изменен на "${newStatus}"`);
     } catch (error) {
       toast.error('Ошибка изменения статуса');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 

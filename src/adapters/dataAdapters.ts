@@ -325,21 +325,10 @@ function extractCityFromAddress(address?: string): string | null {
   return null;
 }
 
-function mapOrderStatus(backendStatus: string): "new" | "paid" | "assembled" | "completed" | "accepted" | "in-transit" {
-  const statusMap: { [key: string]: "new" | "paid" | "assembled" | "completed" | "accepted" | "in-transit" } = {
-    'новый': 'new',
-    'оплачен': 'paid',
-    'в работе': 'accepted',
-    'в сборке': 'assembled',
-    'собран': 'assembled',
-    'собранный': 'assembled',
-    'готов': 'assembled',
-    'выполнен': 'completed',
-    'доставлен': 'completed',
-    'принят': 'accepted',
-    'в доставке': 'in-transit'
-  };
-  return statusMap[backendStatus?.toLowerCase()] || 'new';
+function mapOrderStatus(backendStatus: string): "NEW" | "IN_WORK" | "READY" | "DELIVERED" | "PAID" | "COLLECTED" | "CANCELED" {
+  // Прямо возвращаем SQLModel enum значения без адаптации
+  const sqlModelStatus = backendStatus as "NEW" | "IN_WORK" | "READY" | "DELIVERED" | "PAID" | "COLLECTED" | "CANCELED";
+  return sqlModelStatus || 'NEW';
 }
 
 export function adaptBackendOrderToOrder(backendOrder: BackendOrder): Order {

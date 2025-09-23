@@ -1,4 +1,5 @@
 import { useState } from "react";
+import React from "react";
 import { ArrowLeft, User, Store, Users, Edit3, Check, X, Plus, Trash2, Phone, MapPin, Clock } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -6,6 +7,8 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { useProfile } from "../hooks/useApiProfile";
+import { apiClient } from "../api/client";
 
 interface FloristProfile {
   id: number;
@@ -38,53 +41,13 @@ interface ProfileProps {
 }
 
 export function Profile({ onClose, showHeader = true }: ProfileProps) {
-  // Мок-данные профиля
-  const [floristProfile, setFloristProfile] = useState<FloristProfile>({
-    id: 1,
-    name: "Анна Иванова",
-    phone: "+7 (777) 123-45-67",
-    position: 'director',
-    bio: "Профессиональный флорист с многолетним опытом. Специализируюсь на создании свадебных композиций и эксклюзивных букетов."
-  });
-
-  const [shopInfo, setShopInfo] = useState<ShopInfo>({
-    name: "Цветочная мастерская 'Лепесток'",
-    address: "г. Алматы, ул. Абая 150, ТЦ 'Dostyk Plaza'",
-    phone: "+7 (727) 123-45-67",
-    workingHours: "Пн-Вс: 09:00 - 21:00",
-    description: "Авторская цветочная мастерская с индивидуальным подходом к каждому клиенту. Создаем уникальные композиции для особых моментов."
-  });
-
-  const [colleagues, setColleagues] = useState<Colleague[]>([
-    {
-      id: 1,
-      name: "Мария Петрова",
-      phone: "+7 (777) 234-56-78",
-      position: 'manager',
-      isActive: true,
-      joinedDate: new Date(2023, 1, 15)
-    },
-    {
-      id: 2,
-      name: "Елена Козлова",
-      phone: "+7 (777) 345-67-89",
-      position: 'seller',
-      isActive: true,
-      joinedDate: new Date(2023, 5, 20)
-    },
-    {
-      id: 3,
-      name: "Дария Сидорова",
-      phone: "+7 (777) 456-78-90",
-      position: 'courier',
-      isActive: false,
-      joinedDate: new Date(2024, 2, 10)
-    }
-  ]);
+  // Use API hook instead of mock data
+  const { profile: floristProfile, shop: shopInfo, colleagues: apiColleagues, loading, error, updateProfile, updateShop } = useProfile();
 
   const [editingSection, setEditingSection] = useState<'profile' | 'shop' | 'colleagues' | null>(null);
-  const [tempProfile, setTempProfile] = useState<FloristProfile>(floristProfile);
-  const [tempShop, setTempShop] = useState<ShopInfo>(shopInfo);
+  const [tempProfile, setTempProfile] = useState<FloristProfile | null>(null);
+  const [tempShop, setTempShop] = useState<ShopInfo | null>(null);
+  const [colleagues, setColleagues] = useState<Colleague[]>([]);
   const [newColleague, setNewColleague] = useState<Partial<Colleague>>({
     name: '',
     phone: '',
@@ -101,14 +64,24 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
     courier: 'Курьер'
   };
 
-  const handleSaveProfile = () => {
-    setFloristProfile(tempProfile);
-    setEditingSection(null);
+  const handleSaveProfile = async () => {
+    if (!tempProfile) return;
+    try {
+      await updateProfile(tempProfile);
+      setEditingSection(null);
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+    }
   };
 
-  const handleSaveShop = () => {
-    setShopInfo(tempShop);
-    setEditingSection(null);
+  const handleSaveShop = async () => {
+    if (!tempShop) return;
+    try {
+      await updateShop(tempShop);
+      setEditingSection(null);
+    } catch (err) {
+      console.error('Failed to save shop info:', err);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -119,19 +92,86 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
     setTempColleague(null);
   };
 
-  const handleAddColleague = () => {
+  // Initialize temp states when data loads
+  React.useEffect(() => {
+    if (floristProfile && editingSection === 'profile') {
+      setTempProfile(floristProfile);
+    }
+  }, [floristProfile, editingSection]);
+
+  React.useEffect(() => {
+    if (shopInfo && editingSection === 'shop') {
+      setTempShop(shopInfo);
+    }
+  }, [shopInfo, editingSection]);
+
+  // Sync API colleagues with local state
+  React.useEffect(() => {
+    if (apiColleagues) {
+      setColleagues(apiColleagues);
+    }
+  }, [apiColleagues]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <div className="text-gray-600">Загрузка профиля...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-2">Ошибка загрузки</div>
+          <div className="text-sm text-gray-500">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no profile data
+  if (!floristProfile || !shopInfo) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-600">Данные профиля не найдены</div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleAddColleague = async () => {
     if (newColleague.name && newColleague.phone && newColleague.position) {
-      const colleague: Colleague = {
-        id: Date.now(),
-        name: newColleague.name,
-        phone: newColleague.phone,
-        position: newColleague.position as any,
-        isActive: true,
-        joinedDate: new Date()
-      };
-      setColleagues([...colleagues, colleague]);
-      setNewColleague({ name: '', phone: '', position: 'courier' });
-      setShowAddColleagueForm(false);
+      try {
+        const newUser = await apiClient.createColleague({
+          name: newColleague.name,
+          phone: newColleague.phone,
+          position: newColleague.position
+        });
+
+        const colleague: Colleague = {
+          id: newUser.id || Date.now(),
+          name: newUser.name,
+          phone: newUser.phone || '',
+          position: newUser.position as any,
+          isActive: newUser.isActive || true,
+          joinedDate: newUser.joinedDate ? new Date(newUser.joinedDate) : new Date()
+        };
+
+        setColleagues([...colleagues, colleague]);
+        setNewColleague({ name: '', phone: '', position: 'courier' });
+        setShowAddColleagueForm(false);
+      } catch (error) {
+        console.error('Error adding colleague:', error);
+        // TODO: Show error message to user
+      }
     }
   };
 
@@ -145,8 +185,14 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
     );
   };
 
-  const handleRemoveColleague = (id: number) => {
-    setColleagues(prev => prev.filter(colleague => colleague.id !== id));
+  const handleRemoveColleague = async (id: number) => {
+    try {
+      await apiClient.deleteColleague(id);
+      setColleagues(prev => prev.filter(colleague => colleague.id !== id));
+    } catch (error) {
+      console.error('Error deleting colleague:', error);
+      // TODO: Show error message to user
+    }
   };
 
   const handleEditColleague = (colleague: Colleague) => {
@@ -154,17 +200,37 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
     setTempColleague({ ...colleague });
   };
 
-  const handleSaveColleague = () => {
+  const handleSaveColleague = async () => {
     if (tempColleague && editingColleagueId) {
-      setColleagues(prev =>
-        prev.map(colleague =>
-          colleague.id === editingColleagueId
-            ? tempColleague
-            : colleague
-        )
-      );
-      setEditingColleagueId(null);
-      setTempColleague(null);
+      try {
+        const updatedUser = await apiClient.updateColleague(editingColleagueId, {
+          name: tempColleague.name,
+          phone: tempColleague.phone,
+          position: tempColleague.position
+        });
+
+        const updatedColleague: Colleague = {
+          id: updatedUser.id || editingColleagueId,
+          name: updatedUser.name,
+          phone: updatedUser.phone || '',
+          position: updatedUser.position as any,
+          isActive: updatedUser.isActive || true,
+          joinedDate: updatedUser.joinedDate ? new Date(updatedUser.joinedDate) : tempColleague.joinedDate
+        };
+
+        setColleagues(prev =>
+          prev.map(colleague =>
+            colleague.id === editingColleagueId
+              ? updatedColleague
+              : colleague
+          )
+        );
+        setEditingColleagueId(null);
+        setTempColleague(null);
+      } catch (error) {
+        console.error('Error updating colleague:', error);
+        // TODO: Show error message to user
+      }
     }
   };
 
@@ -224,11 +290,14 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                     Личные данные
                   </CardTitle>
                   {editingSection !== 'profile' && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="p-2"
-                      onClick={() => setEditingSection('profile')}
+                      onClick={() => {
+                        setEditingSection('profile');
+                        setTempProfile(floristProfile);
+                      }}
                     >
                       <Edit3 className="w-4 h-4 text-gray-500" />
                     </Button>
@@ -241,8 +310,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                         <div>
                           <label className="text-sm text-gray-600 mb-1 block">Имя</label>
                           <Input
-                            value={tempProfile.name}
-                            onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
+                            value={tempProfile?.name || ''}
+                            onChange={(e) => tempProfile && setTempProfile({ ...tempProfile, name: e.target.value })}
                             className="h-10"
                           />
                         </div>
@@ -250,8 +319,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                         <div>
                           <label className="text-sm text-gray-600 mb-1 block">Телефон</label>
                           <Input
-                            value={tempProfile.phone}
-                            onChange={(e) => setTempProfile({ ...tempProfile, phone: e.target.value })}
+                            value={tempProfile?.phone || ''}
+                            onChange={(e) => tempProfile && setTempProfile({ ...tempProfile, phone: e.target.value })}
                             className="h-10"
                           />
                         </div>
@@ -259,9 +328,9 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
 
                       <div>
                         <label className="text-sm text-gray-600 mb-1 block">Должность</label>
-                        <Select 
-                          value={tempProfile.position} 
-                          onValueChange={(value: any) => setTempProfile({ ...tempProfile, position: value })}
+                        <Select
+                          value={tempProfile?.position || 'seller'}
+                          onValueChange={(value: any) => tempProfile && setTempProfile({ ...tempProfile, position: value })}
                         >
                           <SelectTrigger className="h-10">
                             <SelectValue />
@@ -278,8 +347,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                       <div>
                         <label className="text-sm text-gray-600 mb-1 block">О себе</label>
                         <Textarea
-                          value={tempProfile.bio || ''}
-                          onChange={(e) => setTempProfile({ ...tempProfile, bio: e.target.value })}
+                          value={tempProfile?.bio || ''}
+                          onChange={(e) => tempProfile && setTempProfile({ ...tempProfile, bio: e.target.value })}
                           className="min-h-[80px] resize-none"
                           placeholder="Расскажите о себе и подходе к работе..."
                         />
@@ -322,11 +391,14 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                     Информация о магазине
                   </CardTitle>
                   {editingSection !== 'shop' && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="p-2"
-                      onClick={() => setEditingSection('shop')}
+                      onClick={() => {
+                        setEditingSection('shop');
+                        setTempShop(shopInfo);
+                      }}
                     >
                       <Edit3 className="w-4 h-4 text-gray-500" />
                     </Button>
@@ -338,8 +410,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                       <div>
                         <label className="text-sm text-gray-600 mb-1 block">Название</label>
                         <Input
-                          value={tempShop.name}
-                          onChange={(e) => setTempShop({ ...tempShop, name: e.target.value })}
+                          value={tempShop?.name || ''}
+                          onChange={(e) => tempShop && setTempShop({ ...tempShop, name: e.target.value })}
                           className="h-10"
                         />
                       </div>
@@ -347,8 +419,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                       <div>
                         <label className="text-sm text-gray-600 mb-1 block">Адрес</label>
                         <Input
-                          value={tempShop.address}
-                          onChange={(e) => setTempShop({ ...tempShop, address: e.target.value })}
+                          value={tempShop?.address || ''}
+                          onChange={(e) => tempShop && setTempShop({ ...tempShop, address: e.target.value })}
                           className="h-10"
                         />
                       </div>
@@ -357,8 +429,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                         <div>
                           <label className="text-sm text-gray-600 mb-1 block">Телефон</label>
                           <Input
-                            value={tempShop.phone}
-                            onChange={(e) => setTempShop({ ...tempShop, phone: e.target.value })}
+                            value={tempShop?.phone || ''}
+                            onChange={(e) => tempShop && setTempShop({ ...tempShop, phone: e.target.value })}
                             className="h-10"
                           />
                         </div>
@@ -366,8 +438,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                         <div>
                           <label className="text-sm text-gray-600 mb-1 block">Часы работы</label>
                           <Input
-                            value={tempShop.workingHours}
-                            onChange={(e) => setTempShop({ ...tempShop, workingHours: e.target.value })}
+                            value={tempShop?.workingHours || ''}
+                            onChange={(e) => tempShop && setTempShop({ ...tempShop, workingHours: e.target.value })}
                             className="h-10"
                             placeholder="например: Пн-Вс: 09:00 - 21:00"
                           />
@@ -377,8 +449,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                       <div>
                         <label className="text-sm text-gray-600 mb-1 block">Описание</label>
                         <Textarea
-                          value={tempShop.description || ''}
-                          onChange={(e) => setTempShop({ ...tempShop, description: e.target.value })}
+                          value={tempShop?.description || ''}
+                          onChange={(e) => tempShop && setTempShop({ ...tempShop, description: e.target.value })}
                           className="min-h-[80px] resize-none"
                           placeholder="Расскажите о вашем магазине..."
                         />
@@ -654,11 +726,14 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-gray-900">Личные данные</h2>
               {editingSection !== 'profile' && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="p-1"
-                  onClick={() => setEditingSection('profile')}
+                  onClick={() => {
+                    setEditingSection('profile');
+                    setTempProfile(floristProfile);
+                  }}
                 >
                   <Edit3 className="w-4 h-4 text-gray-500" />
                 </Button>
@@ -670,8 +745,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Имя</label>
                   <Input
-                    value={tempProfile.name}
-                    onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
+                    value={tempProfile?.name || ''}
+                    onChange={(e) => tempProfile && setTempProfile({ ...tempProfile, name: e.target.value })}
                     className="h-12"
                   />
                 </div>
@@ -679,17 +754,17 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Телефон</label>
                   <Input
-                    value={tempProfile.phone}
-                    onChange={(e) => setTempProfile({ ...tempProfile, phone: e.target.value })}
+                    value={tempProfile?.phone || ''}
+                    onChange={(e) => tempProfile && setTempProfile({ ...tempProfile, phone: e.target.value })}
                     className="h-12"
                   />
                 </div>
 
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Должность</label>
-                  <Select 
-                    value={tempProfile.position} 
-                    onValueChange={(value: any) => setTempProfile({ ...tempProfile, position: value })}
+                  <Select
+                    value={tempProfile?.position || 'seller'}
+                    onValueChange={(value: any) => tempProfile && setTempProfile({ ...tempProfile, position: value })}
                   >
                     <SelectTrigger className="h-12">
                       <SelectValue />
@@ -706,8 +781,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">О себе</label>
                   <Textarea
-                    value={tempProfile.bio || ''}
-                    onChange={(e) => setTempProfile({ ...tempProfile, bio: e.target.value })}
+                    value={tempProfile?.bio || ''}
+                    onChange={(e) => tempProfile && setTempProfile({ ...tempProfile, bio: e.target.value })}
                     className="min-h-[80px] resize-none"
                     placeholder="Расскажите о себе и подходе к работе..."
                   />
@@ -751,11 +826,14 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-gray-900">Информация о магазине</h2>
               {editingSection !== 'shop' && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="p-1"
-                  onClick={() => setEditingSection('shop')}
+                  onClick={() => {
+                    setEditingSection('shop');
+                    setTempShop(shopInfo);
+                  }}
                 >
                   <Edit3 className="w-4 h-4 text-gray-500" />
                 </Button>
@@ -767,8 +845,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Название</label>
                   <Input
-                    value={tempShop.name}
-                    onChange={(e) => setTempShop({ ...tempShop, name: e.target.value })}
+                    value={tempShop?.name || ''}
+                    onChange={(e) => tempShop && setTempShop({ ...tempShop, name: e.target.value })}
                     className="h-12"
                   />
                 </div>
@@ -776,8 +854,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Адрес</label>
                   <Input
-                    value={tempShop.address}
-                    onChange={(e) => setTempShop({ ...tempShop, address: e.target.value })}
+                    value={tempShop?.address || ''}
+                    onChange={(e) => tempShop && setTempShop({ ...tempShop, address: e.target.value })}
                     className="h-12"
                   />
                 </div>
@@ -785,8 +863,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Телефон</label>
                   <Input
-                    value={tempShop.phone}
-                    onChange={(e) => setTempShop({ ...tempShop, phone: e.target.value })}
+                    value={tempShop?.phone || ''}
+                    onChange={(e) => tempShop && setTempShop({ ...tempShop, phone: e.target.value })}
                     className="h-12"
                   />
                 </div>
@@ -794,8 +872,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Часы работы</label>
                   <Input
-                    value={tempShop.workingHours}
-                    onChange={(e) => setTempShop({ ...tempShop, workingHours: e.target.value })}
+                    value={tempShop?.workingHours || ''}
+                    onChange={(e) => tempShop && setTempShop({ ...tempShop, workingHours: e.target.value })}
                     className="h-12"
                     placeholder="например: Пн-Вс: 09:00 - 21:00"
                   />
@@ -804,8 +882,8 @@ export function Profile({ onClose, showHeader = true }: ProfileProps) {
                 <div>
                   <label className="text-sm text-gray-600 mb-1 block">Описание</label>
                   <Textarea
-                    value={tempShop.description || ''}
-                    onChange={(e) => setTempShop({ ...tempShop, description: e.target.value })}
+                    value={tempShop?.description || ''}
+                    onChange={(e) => tempShop && setTempShop({ ...tempShop, description: e.target.value })}
                     className="min-h-[80px] resize-none"
                     placeholder="Расскажите о вашем магазине..."
                   />

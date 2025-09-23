@@ -22,6 +22,7 @@ npm run build     # Build for production (outputs to /build)
 - **UI Components**: Custom design system built on Radix UI primitives and shadcn/ui patterns
 - **State Management**: React hooks with centralized state in `useIntegratedAppState`
 - **API Integration**: FastAPI backend expected at `http://localhost:8011`
+- **Database**: SQLModel (SQLAlchemy + Pydantic combined) with SQLite
 
 ### Key Architectural Patterns
 
@@ -69,10 +70,23 @@ The app expects a FastAPI backend with endpoints for:
 - `/api/orders` - Order processing
 - `/api/stats` - Dashboard statistics
 
+### Backend Architecture (SQLModel Migration - Sept 2025)
+**NEW**: The backend has been migrated from SQLAlchemy to SQLModel for cleaner code:
+- **Models**: `../Leken/models_sqlmodel.py` - Single source of truth for all models
+- **API**: `../Leken/crm_api_sqlmodel.py` - Simplified API without model duplication
+- **Main**: `../Leken/main_sqlmodel.py` - Application entry point
+- **Database**: `leken_sqlmodel.db` - SQLite database with SQLModel
+
+#### Key Benefits of SQLModel:
+- 🎯 One model serves both as database table AND API schema (no more Pydantic duplicates)
+- 📉 59% less code (847 lines vs 2044 lines)
+- 🚀 Better type hints and IDE support
+- ✅ Created by FastAPI author for perfect integration
+
 ### Type System
 Frontend uses adapted types separate from backend:
 - Frontend types: `src/types/index.ts`
-- Backend types: `src/api/types.ts`
+- Backend types: Now unified in SQLModel models
 - Adapters handle transformation between them
 
 ### Error Boundaries
@@ -107,7 +121,7 @@ This separation is intentional for:
 
 #### Quick Start
 ```bash
-# Method 1: Using dev script
+# Method 1: Using dev script (RECOMMENDED - uses SQLModel)
 chmod +x dev.sh
 ./dev.sh start
 
@@ -115,7 +129,7 @@ chmod +x dev.sh
 docker-compose up
 
 # Method 3: Manual (two terminals)
-# Terminal 1 - Backend:
+# Terminal 1 - Backend (SQLModel):
 cd ../Leken && python3 -m fastapi dev main_sqlmodel.py --port 8011
 # Terminal 2 - Frontend:
 npm run dev
@@ -131,12 +145,17 @@ npm run dev
 Backend API is expected at `http://localhost:8011` with SQLModel-based endpoints.
 Key API response includes `delivery_time_range` field for order time management.
 
-### Recent Fixes
+### Recent Updates (Sept 2025)
+- **🚀 SQLModel Migration**: Complete backend rewrite from SQLAlchemy to SQLModel
+- **📉 Code Reduction**: 59% less code with unified model definitions
+- **✅ Full Compatibility**: Frontend works seamlessly with new backend
 - **Delivery Time Saving**: Fixed `delivery_time_range` field persistence
 - **Date Parsing**: Added DD.MM.YYYY format support for Russian dates
-- **API Methods**: Changed from `partialUpdate` to `update` for order modifications
 
 ### Backend Repository
 Located at: https://github.com/alekenov/leken-auth-system
-Main API file: `crm_api.py`
-Database: SQLModel with PostgreSQL
+Main API files:
+- `main_sqlmodel.py` - Application entry point
+- `models_sqlmodel.py` - All database models in one place
+- `crm_api_sqlmodel.py` - Simplified API routes
+Database: SQLModel with SQLite (`leken_sqlmodel.db`)

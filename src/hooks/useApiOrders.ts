@@ -1,5 +1,5 @@
 // Hook for Orders API integration
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ApiOrder,
   OrderStatus,
@@ -7,32 +7,39 @@ import {
   CreateOrderRequest,
   UpdateOrderRequest
 } from '../types/api';
+import { Order } from '../types';
 import { apiClient, APIError } from '../api/client';
+import { adaptBackendOrdersToOrders } from '../adapters/dataAdapters';
 
 interface UseOrdersResult {
-  orders: ApiOrder[];
+  orders: Order[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  createOrder: (data: CreateOrderRequest) => Promise<ApiOrder>;
-  updateOrder: (id: number, data: UpdateOrderRequest) => Promise<ApiOrder>;
-  updateOrderStatus: (id: number, status: OrderStatus) => Promise<ApiOrder>;
+  createOrder: (data: CreateOrderRequest) => Promise<Order>;
+  updateOrder: (id: number, data: UpdateOrderRequest) => Promise<Order>;
+  updateOrderStatus: (id: number, status: OrderStatus) => Promise<Order>;
   deleteOrder: (id: number) => Promise<void>;
-  assignFlorist: (orderId: number, floristId: number | null) => Promise<ApiOrder>;
-  assignCourier: (orderId: number, courierId: number | null) => Promise<ApiOrder>;
+  assignFlorist: (orderId: number, floristId: number | null) => Promise<Order>;
+  assignCourier: (orderId: number, courierId: number | null) => Promise<Order>;
 }
 
 export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
-  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [rawOrders, setRawOrders] = useState<ApiOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Convert raw API orders to frontend orders using useMemo to prevent infinite rerenders
+  const orders = useMemo(() => adaptBackendOrdersToOrders(rawOrders), [rawOrders]);
 
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await apiClient.getOrders(params);
-      setOrders(response.orders);
+      // Backend returns orders directly as array, not wrapped in { items: [...] }
+      const orders = Array.isArray(response) ? response : response.items || [];
+      setRawOrders(orders);
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -44,12 +51,12 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     }
   }, [params]);
 
-  const createOrder = useCallback(async (data: CreateOrderRequest): Promise<ApiOrder> => {
+  const createOrder = useCallback(async (data: CreateOrderRequest): Promise<Order> => {
     try {
       setError(null);
       const newOrder = await apiClient.createOrder(data);
-      setOrders(prev => [newOrder, ...prev]);
-      return newOrder;
+      setRawOrders(prev => [newOrder, ...prev]);
+      return adaptBackendOrdersToOrders([newOrder])[0];
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -59,16 +66,16 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     }
   }, []);
 
-  const updateOrder = useCallback(async (id: number, data: UpdateOrderRequest): Promise<ApiOrder> => {
+  const updateOrder = useCallback(async (id: number, data: UpdateOrderRequest): Promise<Order> => {
     try {
       setError(null);
       const updatedOrder = await apiClient.updateOrder(id, data);
-      setOrders(prev =>
+      setRawOrders(prev =>
         prev.map(order =>
           order.id === id ? updatedOrder : order
         )
       );
-      return updatedOrder;
+      return adaptBackendOrdersToOrders([updatedOrder])[0];
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -78,16 +85,16 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     }
   }, []);
 
-  const updateOrderStatus = useCallback(async (id: number, status: OrderStatus): Promise<ApiOrder> => {
+  const updateOrderStatus = useCallback(async (id: number, status: OrderStatus): Promise<Order> => {
     try {
       setError(null);
       const updatedOrder = await apiClient.updateOrderStatus(id, status);
-      setOrders(prev =>
+      setRawOrders(prev =>
         prev.map(order =>
           order.id === id ? updatedOrder : order
         )
       );
-      return updatedOrder;
+      return adaptBackendOrdersToOrders([updatedOrder])[0];
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -101,7 +108,7 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     try {
       setError(null);
       await apiClient.deleteOrder(id);
-      setOrders(prev => prev.filter(order => order.id !== id));
+      setRawOrders(prev => prev.filter(order => order.id !== id));
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -111,16 +118,16 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     }
   }, []);
 
-  const assignFlorist = useCallback(async (orderId: number, floristId: number | null): Promise<ApiOrder> => {
+  const assignFlorist = useCallback(async (orderId: number, floristId: number | null): Promise<Order> => {
     try {
       setError(null);
       const updatedOrder = await apiClient.assignFlorist(orderId, floristId);
-      setOrders(prev =>
+      setRawOrders(prev =>
         prev.map(order =>
           order.id === orderId ? updatedOrder : order
         )
       );
-      return updatedOrder;
+      return adaptBackendOrdersToOrders([updatedOrder])[0];
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -130,16 +137,16 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     }
   }, []);
 
-  const assignCourier = useCallback(async (orderId: number, courierId: number | null): Promise<ApiOrder> => {
+  const assignCourier = useCallback(async (orderId: number, courierId: number | null): Promise<Order> => {
     try {
       setError(null);
       const updatedOrder = await apiClient.assignCourier(orderId, courierId);
-      setOrders(prev =>
+      setRawOrders(prev =>
         prev.map(order =>
           order.id === orderId ? updatedOrder : order
         )
       );
-      return updatedOrder;
+      return adaptBackendOrdersToOrders([updatedOrder])[0];
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message
@@ -169,9 +176,19 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
 
 // Hook for single order
 export function useOrder(id: number) {
-  const [order, setOrder] = useState<ApiOrder | null>(null);
+  const [rawOrder, setRawOrder] = useState<ApiOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Convert raw API order to frontend order using useMemo to prevent infinite rerenders
+  const order = useMemo(() => {
+    if (!rawOrder) return null;
+    console.log('🔄 Converting single raw order to frontend order:', rawOrder);
+    const adaptedOrder = adaptBackendOrdersToOrders([rawOrder])[0];
+    console.log('✅ Adapted single order:', adaptedOrder);
+    console.log('📋 Main product:', adaptedOrder.mainProduct);
+    return adaptedOrder;
+  }, [rawOrder]);
 
   const fetchOrder = useCallback(async () => {
     if (!id) return;
@@ -179,8 +196,11 @@ export function useOrder(id: number) {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔍 Fetching single order with id:', id);
       const orderData = await apiClient.getOrder(id);
-      setOrder(orderData);
+      console.log('📥 Raw single order response:', orderData);
+      console.log('📋 Order items:', orderData.order_items);
+      setRawOrder(orderData);
     } catch (err) {
       const errorMessage = err instanceof APIError
         ? err.message

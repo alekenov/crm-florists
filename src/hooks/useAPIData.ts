@@ -5,10 +5,12 @@ import {
 import {
   clients, products, inventory, orders, stats
 } from '../api/services';
+import { apiClient } from '../api/client';
 
 export interface APIState {
   // Data
   clients: Client[];
+  customers: any[]; // Данные customers с новой структурой (прямая интеграция)
   products: Product[];
   inventory: Inventory[];
   orders: Order[];
@@ -17,6 +19,7 @@ export interface APIState {
   // Loading states
   loading: boolean;
   clientsLoading: boolean;
+  customersLoading: boolean;
   productsLoading: boolean;
   inventoryLoading: boolean;
   ordersLoading: boolean;
@@ -24,6 +27,7 @@ export interface APIState {
   // Error states
   error: string | null;
   clientsError: string | null;
+  customersError: string | null;
   productsError: string | null;
   inventoryError: string | null;
   ordersError: string | null;
@@ -31,6 +35,7 @@ export interface APIState {
   // Methods
   refetchAll: () => Promise<void>;
   refetchClients: () => Promise<void>;
+  refetchCustomers: () => Promise<void>;
   refetchProducts: () => Promise<void>;
   refetchInventory: () => Promise<void>;
   refetchOrders: () => Promise<void>;
@@ -40,6 +45,7 @@ export interface APIState {
 export function useAPIData(): APIState {
   // Data states
   const [clients_data, setClients] = useState<Client[]>([]);
+  const [customers_data, setCustomers] = useState<any[]>([]);
   const [products_data, setProducts] = useState<Product[]>([]);
   const [inventory_data, setInventory] = useState<Inventory[]>([]);
   const [orders_data, setOrders] = useState<Order[]>([]);
@@ -48,6 +54,7 @@ export function useAPIData(): APIState {
   // Loading states
   const [loading, setLoading] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [customersLoading, setCustomersLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(false);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -55,6 +62,7 @@ export function useAPIData(): APIState {
   // Error states
   const [error, setError] = useState<string | null>(null);
   const [clientsError, setClientsError] = useState<string | null>(null);
+  const [customersError, setCustomersError] = useState<string | null>(null);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [ordersError, setOrdersError] = useState<string | null>(null);
@@ -72,6 +80,27 @@ export function useAPIData(): APIState {
       console.error('Error fetching clients:', err);
     } finally {
       setClientsLoading(false);
+    }
+  }, []);
+
+  const refetchCustomers = useCallback(async () => {
+    setCustomersLoading(true);
+    setCustomersError(null);
+    try {
+      const data = await apiClient.getCustomers();
+      // Преобразуем даты из строк в Date объекты
+      const processedData = data.map((customer: any) => ({
+        ...customer,
+        memberSince: customer.memberSince ? new Date(customer.memberSince) : new Date(),
+        lastOrderDate: customer.lastOrderDate ? new Date(customer.lastOrderDate) : null
+      }));
+      setCustomers(processedData);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch customers';
+      setCustomersError(errorMessage);
+      console.error('Error fetching customers:', err);
+    } finally {
+      setCustomersLoading(false);
     }
   }, []);
 
@@ -136,6 +165,7 @@ export function useAPIData(): APIState {
     try {
       await Promise.all([
         refetchClients(),
+        refetchCustomers(),
         refetchProducts(),
         refetchInventory(),
         refetchOrders(),
@@ -148,7 +178,7 @@ export function useAPIData(): APIState {
     } finally {
       setLoading(false);
     }
-  }, [refetchClients, refetchProducts, refetchInventory, refetchOrders, refetchStats]);
+  }, [refetchClients, refetchCustomers, refetchProducts, refetchInventory, refetchOrders, refetchStats]);
 
   // Initial data load
   useEffect(() => {
@@ -158,6 +188,7 @@ export function useAPIData(): APIState {
   return {
     // Data
     clients: clients_data,
+    customers: customers_data,
     products: products_data,
     inventory: inventory_data,
     orders: orders_data,
@@ -166,6 +197,7 @@ export function useAPIData(): APIState {
     // Loading states
     loading,
     clientsLoading,
+    customersLoading,
     productsLoading,
     inventoryLoading,
     ordersLoading,
@@ -173,6 +205,7 @@ export function useAPIData(): APIState {
     // Error states
     error,
     clientsError,
+    customersError,
     productsError,
     inventoryError,
     ordersError,
@@ -180,6 +213,7 @@ export function useAPIData(): APIState {
     // Methods
     refetchAll,
     refetchClients,
+    refetchCustomers,
     refetchProducts,
     refetchInventory,
     refetchOrders,

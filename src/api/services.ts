@@ -135,7 +135,9 @@ export const orderService = {
     if (filters?.date_to) params.set('date_to', filters.date_to);
 
     const queryString = params.toString();
-    return apiClient.get<Order[]>(`/api/orders${queryString ? `?${queryString}` : ''}`);
+    const response = await apiClient.get<any>(`/api/orders${queryString ? `?${queryString}` : ''}`);
+    // Handle paginated response from SQLModel backend
+    return response.items || response || [];
   },
 
   async getById(id: number): Promise<Order> {
@@ -147,7 +149,7 @@ export const orderService = {
   },
 
   async update(id: number, data: OrderUpdate): Promise<Order> {
-    return apiClient.put<Order>(`/api/orders/${id}`, data);
+    return apiClient.patch<Order>(`/api/orders/${id}`, data);
   },
 
   async partialUpdate(id: number, data: OrderUpdate): Promise<Order> {

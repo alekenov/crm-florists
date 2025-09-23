@@ -147,7 +147,7 @@ export interface OrderUpdate {
 }
 
 export interface OrderStatusUpdate {
-  status: 'новый' | 'в работе' | 'готов' | 'доставлен';
+  new_status: OrderStatus;
 }
 
 // ============== USER TYPES ==============

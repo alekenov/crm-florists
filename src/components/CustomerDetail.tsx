@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Phone, Calendar, TrendingUp, Edit3, User, ShoppingBag, Receipt, Clock } from "lucide-react";
+import { ArrowLeft, Phone, Calendar, TrendingUp, Edit3, User, ShoppingBag, Receipt, Clock, Edit } from "lucide-react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
+import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
@@ -59,7 +60,10 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
   // Fetch individual client data
   const { data: backendClient, loading, error, refetch } = useClientDetail(customerId);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const [notes, setNotes] = useState('');
+  const [editedName, setEditedName] = useState('');
+  const [editedPhone, setEditedPhone] = useState('');
 
   // State and actions
   const { apiActions } = useIntegratedAppState();
@@ -69,12 +73,14 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
     return backendClient ? adaptBackendClientToCustomer(backendClient) : null;
   }, [backendClient]);
 
-  // Initialize notes when customer is loaded
+  // Initialize fields when customer is loaded
   useEffect(() => {
     if (customer) {
       setNotes(customer.notes || '');
+      setEditedName(customer.name || '');
+      setEditedPhone(customer.phone || '');
     }
-  }, [customer?.id, customer?.notes]);
+  }, [customer?.id, customer?.notes, customer?.name, customer?.phone]);
 
   // Handle loading state
   if (loading) {
@@ -163,33 +169,83 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
     setIsEditingNotes(false);
   };
 
+  const handleSaveCustomer = async () => {
+    if (customer) {
+      try {
+        const customerIdNum = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        // Update client through API
+        await apiActions.updateClient(customerIdNum!, {
+          name: editedName.trim() || null,
+          phone: editedPhone.trim()
+        });
+
+        setIsEditingCustomer(false);
+
+        // Refresh this specific client and the clients list
+        await refetch();
+        await onRefreshCustomers?.();
+
+        toast.success('Данные клиента обновлены');
+      } catch (error) {
+        console.error('Error updating client:', error);
+        toast.error('Ошибка при обновлении данных клиента');
+      }
+    }
+  };
+
+  const handleCancelCustomer = () => {
+    setEditedName(customer?.name || '');
+    setEditedPhone(customer?.phone || '');
+    setIsEditingCustomer(false);
+  };
+
   return (
     <div className="bg-white min-h-screen">
       {/* Mobile Header */}
-      <div className="flex items-center p-4 border-b border-gray-100 lg:hidden">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="p-2 mr-3"
-          onClick={onClose}
+      <div className="flex items-center justify-between p-4 border-b border-gray-100 lg:hidden">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-2 mr-3"
+            onClick={onClose}
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </Button>
+          <h1 className="text-gray-900">Клиент</h1>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => setIsEditingCustomer(true)}
+          className="flex items-center gap-1 px-3"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <Edit className="w-4 h-4" />
+          Править
         </Button>
-        <h1 className="text-gray-900">Клиент</h1>
       </div>
 
       {/* Desktop Header */}
       <div className="hidden lg:block border-b border-gray-200 p-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {customer.name && customer.name.trim() ? customer.name : `Клиент ${customer.phone.slice(-4)}`}
-            </h1>
-            <p className="text-gray-600 mt-1">Карточка клиента и история заказов</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {customer.name && customer.name.trim() ? customer.name : `Клиент ${customer.phone.slice(-4)}`}
+              </h1>
+              <p className="text-gray-600 mt-1">Карточка клиента и история заказов</p>
+            </div>
           </div>
+          <Button
+            onClick={() => setIsEditingCustomer(true)}
+            className="flex items-center gap-2"
+          >
+            <Edit className="w-4 h-4" />
+            Редактировать
+          </Button>
         </div>
       </div>
 
@@ -208,34 +264,81 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`text-lg font-medium truncate ${
-                        customer.name && customer.name.trim() ? 'text-gray-900' : 'text-gray-600 italic'
-                      }`}>
-                        {customer.name && customer.name.trim() ? customer.name : `Клиент ${customer.phone.slice(-4)}`}
-                      </h3>
-                    </div>
-                    <Badge variant="secondary" className={`flex-shrink-0 ${
-                      customer.status === 'vip' ? 'bg-purple-100 text-purple-700' :
-                      customer.status === 'active' ? 'bg-green-100 text-green-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {statusConfig[customer.status].label}
-                    </Badge>
-                  </div>
+                  {isEditingCustomer ? (
+                    <>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Имя клиента
+                          </label>
+                          <Input
+                            value={editedName}
+                            onChange={(e) => setEditedName(e.target.value)}
+                            placeholder="Введите имя клиента"
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Телефон
+                          </label>
+                          <Input
+                            value={editedPhone}
+                            onChange={(e) => setEditedPhone(e.target.value)}
+                            placeholder="Введите номер телефона"
+                            className="w-full"
+                            type="tel"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={handleSaveCustomer}
+                          className="flex-1"
+                        >
+                          Сохранить
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleCancelCustomer}
+                          className="flex-1"
+                        >
+                          Отмена
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`text-lg font-medium truncate ${
+                            customer.name && customer.name.trim() ? 'text-gray-900' : 'text-gray-600 italic'
+                          }`}>
+                            {customer.name && customer.name.trim() ? customer.name : `Клиент ${customer.phone.slice(-4)}`}
+                          </h3>
+                        </div>
+                        <Badge variant="secondary" className={`flex-shrink-0 ${
+                          customer.status === 'vip' ? 'bg-purple-100 text-purple-700' :
+                          customer.status === 'active' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {statusConfig[customer.status].label}
+                        </Badge>
+                      </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <Phone className="w-4 h-4 mr-3" />
-                      <span>{customer.phone}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="w-4 h-4 mr-3" />
-                      <span>Клиент с {formatDate(customer.memberSince)}</span>
-                    </div>
-                  </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center text-gray-600">
+                          <Phone className="w-4 h-4 mr-3" />
+                          <span>{customer.phone}</span>
+                        </div>
+
+                        <div className="flex items-center text-gray-600">
+                          <Calendar className="w-4 h-4 mr-3" />
+                          <span>Клиент с {formatDate(customer.memberSince)}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -436,28 +539,75 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
       <div className="lg:hidden pb-6">
         {/* Customer Info */}
         <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <h2 className={`truncate ${customer.name && customer.name.trim() ? 'text-gray-900' : 'text-gray-600 italic'}`}>
-                {customer.name && customer.name.trim() ? customer.name : `Клиент ${customer.phone.slice(-4)}`}
-              </h2>
+          {isEditingCustomer ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Имя клиента
+                </label>
+                <Input
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  placeholder="Введите имя клиента"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Телефон
+                </label>
+                <Input
+                  value={editedPhone}
+                  onChange={(e) => setEditedPhone(e.target.value)}
+                  placeholder="Введите номер телефона"
+                  className="w-full"
+                  type="tel"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSaveCustomer}
+                  className="flex-1"
+                  size="sm"
+                >
+                  Сохранить
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelCustomer}
+                  className="flex-1"
+                  size="sm"
+                >
+                  Отмена
+                </Button>
+              </div>
             </div>
-            <div className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600 flex-shrink-0">
-              {statusConfig[customer.status].label}
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <h2 className={`truncate ${customer.name && customer.name.trim() ? 'text-gray-900' : 'text-gray-600 italic'}`}>
+                    {customer.name && customer.name.trim() ? customer.name : `Клиент ${customer.phone.slice(-4)}`}
+                  </h2>
+                </div>
+                <div className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600 flex-shrink-0">
+                  {statusConfig[customer.status].label}
+                </div>
+              </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center text-gray-600">
-              <Phone className="w-4 h-4 mr-3" />
-              <span>{customer.phone}</span>
-            </div>
-            
-            <div className="flex items-center text-gray-600">
-              <Calendar className="w-4 h-4 mr-3" />
-              <span>Клиент с {formatDate(customer.memberSince)}</span>
-            </div>
-          </div>
+              <div className="space-y-3">
+                <div className="flex items-center text-gray-600">
+                  <Phone className="w-4 h-4 mr-3" />
+                  <span>{customer.phone}</span>
+                </div>
+
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="w-4 h-4 mr-3" />
+                  <span>Клиент с {formatDate(customer.memberSince)}</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Stats */}

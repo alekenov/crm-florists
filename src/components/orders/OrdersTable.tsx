@@ -8,8 +8,9 @@ import { OrderStatusBadge } from "./OrderStatusBadge";
 interface OrdersTableProps {
   orders: Order[];
   onViewOrder?: (orderId: string) => void;
+  onStatusChange?: (orderId: string, newStatus: string) => void;
+  activeFilter?: string;
   onAddOrder?: () => void;
-  activeFilter: string;
 }
 
 const STATUS_CONFIG = {
@@ -21,7 +22,7 @@ const STATUS_CONFIG = {
   completed: { label: 'Завершен' }
 };
 
-export function OrdersTable({ orders, onViewOrder, onAddOrder, activeFilter }: OrdersTableProps) {
+export function OrdersTable({ orders, onViewOrder, onStatusChange, activeFilter = 'all', onAddOrder }: OrdersTableProps) {
   return (
     <div className="hidden lg:block">
       {orders.length > 0 ? (

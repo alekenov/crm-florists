@@ -10,7 +10,7 @@ import { AddProductForm } from "./AddProductForm";
 import { AddCatalogForm } from "./AddCatalogForm";
 import { ProductDetail } from "./ProductDetail";
 import { EditCatalogForm } from "./EditCatalogForm";
-import { Orders } from "./orders/Orders";
+import { OrdersWithAPI } from "./orders/OrdersWithAPI";
 import { Dashboard } from "./Dashboard";
 import { MainTabView } from "./MainTabView";
 import { OrderDetail } from "./orders/OrderDetail";
@@ -279,11 +279,10 @@ export function AppRouter() {
           onAddCustomer={actions.handleAddCustomer}
           ProductsListComponent={ProductsList}
           OrdersComponent={(props: any) => (
-            <Orders
+            <OrdersWithAPI
               {...props}
-              orders={state.orders || []}
               onViewOrder={actions.handleViewOrder}
-              onStatusChange={actions.handleOrderStatusChange}
+              onAddOrder={actions.handleAddOrder}
             />
           )}
           InventoryComponent={(props: any) => (

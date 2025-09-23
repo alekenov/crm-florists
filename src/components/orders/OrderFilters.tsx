@@ -64,7 +64,7 @@ export function OrderFilters({ orders, onAddOrder, onFiltersChange, headerAction
   // Notify parent of filter changes
   useEffect(() => {
     onFiltersChange({ activeFilter, searchQuery, selectedDate });
-  }, [activeFilter, searchQuery, selectedDate, onFiltersChange]);
+  }, [activeFilter, searchQuery, selectedDate]);
 
   // Функция для подсчета заказов по датам
   const getOrderCountsByDate = (orders: Order[]) => {
@@ -90,19 +90,20 @@ export function OrderFilters({ orders, onAddOrder, onFiltersChange, headerAction
 
   // Подсчитываем количество заказов по статусам
   const getOrderCounts = () => {
+    const ordersList = orders || [];
     const counts = {
-      all: orders.length,
-      new: orders.filter(o => o.status === 'new').length,
-      paid: orders.filter(o => o.status === 'paid').length,
-      accepted: orders.filter(o => o.status === 'accepted').length,
-      assembled: orders.filter(o => o.status === 'assembled').length,
-      completed: orders.filter(o => o.status === 'completed').length
+      all: ordersList.length,
+      new: ordersList.filter(o => o.status === 'new').length,
+      paid: ordersList.filter(o => o.status === 'paid').length,
+      accepted: ordersList.filter(o => o.status === 'accepted').length,
+      assembled: ordersList.filter(o => o.status === 'assembled').length,
+      completed: ordersList.filter(o => o.status === 'completed').length
     };
     return counts;
   };
 
   const orderCounts = getOrderCounts();
-  const orderCountsByDate = getOrderCountsByDate(orders);
+  const orderCountsByDate = getOrderCountsByDate(orders || []);
 
   const handleSearchClick = () => {
     const newIsSearchOpen = !isSearchOpen;

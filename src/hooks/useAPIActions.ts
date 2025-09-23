@@ -160,20 +160,9 @@ export function useAPIActions(apiState: APIState): APIActions {
 
   const updateOrderStatus = useCallback(async (id: number, status: string): Promise<Order> => {
     try {
-      // Map English status to Russian for backend
-      const statusMap: { [key: string]: 'новый' | 'в работе' | 'готов' | 'доставлен' } = {
-        'new': 'новый',
-        'paid': 'в работе',
-        'accepted': 'в работе',
-        'assembled': 'готов',
-        'in-transit': 'доставлен',
-        'completed': 'доставлен'
-      };
-
-      const russianStatus = statusMap[status] || 'новый';
-
+      // Use SQLModel enum values directly
       const statusUpdate: OrderStatusUpdate = {
-        status: russianStatus
+        new_status: status as OrderStatus
       };
       const updatedOrder = await orders.updateStatus(id, statusUpdate);
       await apiState.refetchOrders();

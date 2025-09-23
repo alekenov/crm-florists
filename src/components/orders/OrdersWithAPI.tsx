@@ -8,7 +8,7 @@ import { PageHeader } from "../common/PageHeader";
 import { OrderFilters } from "./OrderFilters";
 import { OrderItem } from "./OrderItem";
 import { OrdersTable } from "./OrdersTable";
-import { useOrders } from "../../hooks/useOrders";
+import { useOrders } from "../../hooks/useApiOrders";
 
 type FilterType = 'all' | 'new' | 'paid' | 'accepted' | 'assembled' | 'completed';
 
@@ -33,22 +33,26 @@ export function OrdersWithAPI({ onViewOrder, onAddOrder }: OrdersWithAPIProps) {
     orders,
     loading,
     error,
-    total,
-    page,
-    pageSize,
-    updateStatus,
-    setPage,
-    setPageSize,
-    refreshOrders
+    refetch: refreshOrders,
+    updateOrderStatus
   } = useOrders();
 
   const handleStatusChange = useCallback(async (orderId: string, newStatus: Order['status']) => {
     try {
-      await updateStatus(orderId, newStatus);
+      // Convert string to number for API and frontend status to backend status
+      const statusMap: Record<string, any> = {
+        'new': 'новый',
+        'paid': 'новый',
+        'accepted': 'в работе',
+        'assembled': 'готов',
+        'in-transit': 'готов',
+        'completed': 'доставлен'
+      };
+      await updateOrderStatus(parseInt(orderId), statusMap[newStatus] || 'новый');
     } catch (error) {
       // Error is already handled in the hook
     }
-  }, [updateStatus]);
+  }, [updateOrderStatus]);
 
   // Search orders function (same as original)
   const searchOrders = (orders: Order[], query: string) => {
@@ -144,19 +148,16 @@ export function OrdersWithAPI({ onViewOrder, onAddOrder }: OrdersWithAPIProps) {
       {/* Header */}
       <PageHeader
         title="Заказы"
-        subtitle={`Всего заказов: ${total}`}
+        subtitle={`Всего заказов: ${orders.length}`}
         onAdd={onAddOrder}
         addButtonText="Добавить заказ"
       />
 
       {/* Filters */}
       <OrderFilters
-        activeFilter={filters.activeFilter}
-        onFilterChange={(filter) => setFilters(prev => ({ ...prev, activeFilter: filter }))}
-        selectedDate={filters.selectedDate}
-        onDateChange={(date) => setFilters(prev => ({ ...prev, selectedDate: date }))}
-        searchQuery={filters.searchQuery}
-        onSearchChange={(query) => setFilters(prev => ({ ...prev, searchQuery: query }))}
+        orders={orders}
+        onAddOrder={onAddOrder}
+        onFiltersChange={(newFilters) => setFilters(prev => ({ ...prev, ...newFilters }))}
       />
 
       {/* Content */}
@@ -188,39 +189,14 @@ export function OrdersWithAPI({ onViewOrder, onAddOrder }: OrdersWithAPIProps) {
                 orders={filteredOrders}
                 onViewOrder={(orderId) => onViewOrder?.(orderId)}
                 onStatusChange={handleStatusChange}
+                activeFilter={filters.activeFilter}
+                onAddOrder={onAddOrder}
               />
             </div>
           </>
         )}
       </div>
 
-      {/* Pagination */}
-      {total > pageSize && (
-        <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
-          <div className="text-sm text-gray-700">
-            Показано {Math.min(page * pageSize, total)} из {total} заказов
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1 || loading}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Назад
-            </button>
-            <span className="text-sm text-gray-700">
-              Страница {page} из {Math.ceil(total / pageSize)}
-            </span>
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={page >= Math.ceil(total / pageSize) || loading}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Далее
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Loading overlay for updates */}
       {loading && orders.length > 0 && (

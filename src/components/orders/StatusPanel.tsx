@@ -24,12 +24,12 @@ export function StatusPanel({
   const [courierOptions, setCourierOptions] = useState<Array<{ id: number | null; label: string }>>([]);
 
   const statusOptions = [
-    { value: 'new', label: 'Новый', color: 'bg-gray-100 text-gray-700' },
-    { value: 'paid', label: 'Оплачен', color: 'bg-blue-100 text-blue-700' },
-    { value: 'accepted', label: 'Принят', color: 'bg-yellow-100 text-yellow-700' },
-    { value: 'assembled', label: 'Собран', color: 'bg-orange-100 text-orange-700' },
-    { value: 'in-transit', label: 'В пути', color: 'bg-purple-100 text-purple-700' },
-    { value: 'completed', label: 'Завершен', color: 'bg-green-100 text-green-700' }
+    { value: 'NEW', label: 'Новый', color: 'bg-gray-100 text-gray-700' },
+    { value: 'PAID', label: 'Оплачен', color: 'bg-blue-100 text-blue-700' },
+    { value: 'IN_WORK', label: 'В работе', color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'READY', label: 'Готов', color: 'bg-orange-100 text-orange-700' },
+    { value: 'DELIVERED', label: 'Доставлен', color: 'bg-purple-100 text-purple-700' },
+    { value: 'COLLECTED', label: 'Собран', color: 'bg-green-100 text-green-700' }
   ];
 
   // Load users from API
@@ -40,17 +40,17 @@ export function StatusPanel({
         const data = await response.json();
 
         // Filter florists
-        const florists = data.users.filter((u: any) => u.position === 'Флорист');
+        const florists = data.users.filter((u: any) => u.position === 'Флорист' || u.position === 'seller');
         setFloristOptions([
           { id: null, label: 'Не назначен' },
-          ...florists.map((u: any) => ({ id: u.id, label: u.username }))
+          ...florists.map((u: any) => ({ id: u.id, label: u.name || u.username }))
         ]);
 
         // Filter couriers
-        const couriers = data.users.filter((u: any) => u.position === 'Курьер');
+        const couriers = data.users.filter((u: any) => u.position === 'Курьер' || u.position === 'courier');
         setCourierOptions([
           { id: null, label: 'Не назначен' },
-          ...couriers.map((u: any) => ({ id: u.id, label: u.username }))
+          ...couriers.map((u: any) => ({ id: u.id, label: u.name || u.username }))
         ]);
       } catch (error) {
         console.error('Error loading users:', error);
@@ -128,7 +128,7 @@ export function StatusPanel({
                 className="w-full justify-between"
                 onClick={() => setIsResponsibleDropdownOpen(!isResponsibleDropdownOpen)}
               >
-                <span>{order.executor?.username || 'Не назначен'}</span>
+                <span>{order.executor?.name || 'Не назначен'}</span>
                 <ChevronDown className="w-4 h-4" />
               </Button>
               {isResponsibleDropdownOpen && (
@@ -156,7 +156,7 @@ export function StatusPanel({
                 className="w-full justify-between"
                 onClick={() => setIsCourierDropdownOpen(!isCourierDropdownOpen)}
               >
-                <span>{order.courier?.username || 'Не назначен'}</span>
+                <span>{order.courier?.name || 'Не назначен'}</span>
                 <ChevronDown className="w-4 h-4" />
               </Button>
               {isCourierDropdownOpen && (

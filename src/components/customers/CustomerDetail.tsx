@@ -4,6 +4,9 @@ import { CustomerInfo } from "./CustomerInfo";
 import { CustomerStats } from "./CustomerStats";
 import { CustomerNotes } from "./CustomerNotes";
 import { OrderHistory } from "./OrderHistory";
+import { apiClient } from "../../api/client";
+import { useIntegratedAppState } from "../../hooks/useIntegratedAppState";
+import { toast } from "sonner";
 
 interface Customer {
   id: number;
@@ -21,18 +24,42 @@ interface CustomerDetailProps {
   customerId: number;
   customers: Customer[];
   onClose: () => void;
-  onUpdateCustomer: (customer: Customer) => void;
+  onUpdateCustomer?: (customer: Customer) => void;
   onViewOrder?: (orderId: string) => void;
 }
 
-export function CustomerDetail({ 
-  customerId, 
-  customers, 
-  onClose, 
-  onUpdateCustomer, 
-  onViewOrder 
+export function CustomerDetail({
+  customerId,
+  customers: propCustomers,
+  onClose,
+  onUpdateCustomer,
+  onViewOrder
 }: CustomerDetailProps) {
+  const { customers: stateCustomers, refetchCustomers } = useIntegratedAppState();
+
+  // Use reactive state customers if available, fallback to prop customers
+  const customers = stateCustomers && stateCustomers.length > 0 ? stateCustomers : propCustomers;
   const customer = customers.find(c => c.id === customerId);
+
+  const handleUpdateCustomerInfo = async (updates: { name?: string; phone?: string }) => {
+    try {
+      await apiClient.updateClient(customerId, updates);
+      toast.success('Данные клиента обновлены');
+
+      // Refresh customers data
+      if (refetchCustomers) {
+        await refetchCustomers();
+      }
+
+      // Also call the parent callback if provided
+      if (onUpdateCustomer && customer) {
+        onUpdateCustomer({ ...customer, ...updates });
+      }
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      toast.error('Ошибка при обновлении данных клиента');
+    }
+  };
 
   if (!customer) {
     return (
@@ -47,9 +74,24 @@ export function CustomerDetail({
     );
   }
 
-  const handleUpdateNotes = (notes: string) => {
-    const updatedCustomer = { ...customer, notes };
-    onUpdateCustomer(updatedCustomer);
+  const handleUpdateNotes = async (notes: string) => {
+    try {
+      await apiClient.updateClient(customerId, { notes });
+      toast.success('Заметки обновлены');
+
+      // Refresh customers data
+      if (refetchCustomers) {
+        await refetchCustomers();
+      }
+
+      // Also call the parent callback if provided
+      if (onUpdateCustomer && customer) {
+        onUpdateCustomer({ ...customer, notes });
+      }
+    } catch (error) {
+      console.error('Error updating customer notes:', error);
+      toast.error('Ошибка при обновлении заметок');
+    }
   };
 
   return (
@@ -88,7 +130,7 @@ export function CustomerDetail({
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Left Column - Customer Info & Stats */}
             <div className="xl:col-span-1 space-y-6">
-              <CustomerInfo customer={customer} />
+              <CustomerInfo customer={customer} onUpdateCustomer={handleUpdateCustomerInfo} />
               <CustomerStats customer={customer} />
               <CustomerNotes 
                 customer={customer} 
@@ -109,7 +151,7 @@ export function CustomerDetail({
 
       {/* Mobile Layout */}
       <div className="lg:hidden pb-6">
-        <CustomerInfo customer={customer} />
+        <CustomerInfo customer={customer} onUpdateCustomer={handleUpdateCustomerInfo} />
         <CustomerStats customer={customer} />
         <CustomerNotes 
           customer={customer} 

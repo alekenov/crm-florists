@@ -1,37 +1,33 @@
 import { Button } from "../ui/button";
-import { Order } from "../../src/types";
+import { ApiOrder } from "../../types/api";
 import { getTimeAgo } from "../../src/utils/date";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 
 interface OrderItemProps {
-  order: Order;
+  order: ApiOrder;
   onClick?: (id: string) => void;
-  onStatusChange?: (id: string, newStatus: Order['status']) => void;
+  onStatusChange?: (id: string, newStatus: string) => void;
   searchQuery?: string;
 }
 
 const ACTION_BUTTONS = {
-  new: 'Оплачен',
-  paid: 'Принять',
-  accepted: '+ Фото',
-  assembled: '→ Курьеру',
-  'in-transit': 'Завершить'
+  'новый': 'Принять',
+  'в работе': '+ Фото',
+  'готов': '→ Курьеру'
 };
 
 export function OrderItem({ order, onClick, onStatusChange, searchQuery }: OrderItemProps) {
   const handleStatusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     const statusFlow = {
-      new: 'paid',
-      paid: 'accepted', 
-      accepted: 'assembled',
-      assembled: 'in-transit',
-      'in-transit': 'completed'
+      'новый': 'в работе',
+      'в работе': 'готов',
+      'готов': 'доставлен'
     } as const;
-    
+
     const newStatus = statusFlow[order.status];
     if (newStatus && onStatusChange) {
-      onStatusChange(order.id, newStatus);
+      onStatusChange(String(order.id), newStatus);
     }
   };
 
@@ -51,14 +47,11 @@ export function OrderItem({ order, onClick, onStatusChange, searchQuery }: Order
     );
   };
 
-  // Получаем все товары в заказе (основной + дополнительные)
-  const allProductImages = [
-    ...(order.mainProduct?.image ? [{ image: order.mainProduct.image, id: order.mainProduct.id }] : []),
-    ...(order.additionalItems?.map(item => ({
-      image: item.productImage,
-      id: item.productId
-    })).filter(item => item.image) || [])
-  ];
+  // Получаем все товары в заказе из order_items
+  const allProductImages = order.order_items?.map(item => ({
+    image: item.product?.image_url,
+    id: item.product?.id
+  })).filter(item => item.image) || [];
 
   // Показываем максимум 3 изображения + счетчик для остальных
   const maxVisible = 3;
@@ -73,32 +66,26 @@ export function OrderItem({ order, onClick, onStatusChange, searchQuery }: Order
       <div className="flex justify-between items-start mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span>{highlightMatch(order.number, searchQuery)}</span>
+            <span>{highlightMatch(`№${order.id}`, searchQuery)}</span>
             <OrderStatusBadge status={order.status} />
           </div>
           <div className="text-gray-700">
-            {order.deliveryType === 'pickup' ? (
-              'Самовывоз'
-            ) : (
-              order.deliveryAddress ? 
-                `${order.deliveryCity}, ${order.deliveryAddress}` : 
-                `${order.deliveryCity}, уточнить у получателя`
-            )}
+            {order.delivery_address || 'Уточнить адрес доставки'}
           </div>
           <div className="text-gray-600">
-            {order.deliveryDate === 'today' ? 'Сегодня' : 'Завтра'}, {order.deliveryTime || 'уточнить у получателя'} • {getTimeAgo(order.createdAt)}
+            {order.delivery_date}, {order.delivery_time_range || 'уточнить время'} • {getTimeAgo(new Date(order.created_at))}
           </div>
           {/* Показываем совпадения имен и телефонов при поиске */}
           {searchQuery && (
             <div className="text-gray-600 mt-1 space-y-0.5">
-              {order.sender?.name && order.sender.name.toLowerCase().includes(searchQuery.toLowerCase()) && (
-                <div>Отправитель: {highlightMatch(order.sender.name, searchQuery)}</div>
+              {order.client?.name && order.client.name.toLowerCase().includes(searchQuery.toLowerCase()) && (
+                <div>Заказчик: {highlightMatch(order.client.name, searchQuery)}</div>
               )}
               {order.recipient?.name && order.recipient.name.toLowerCase().includes(searchQuery.toLowerCase()) && (
                 <div>Получатель: {highlightMatch(order.recipient.name, searchQuery)}</div>
               )}
-              {order.sender?.phone && searchQuery.replace(/\D/g, '') && order.sender.phone.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, '')) && (
-                <div>Тел. отправителя: {highlightMatch(order.sender.phone, searchQuery)}</div>
+              {order.client?.phone && searchQuery.replace(/\D/g, '') && order.client.phone.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, '')) && (
+                <div>Тел. заказчика: {highlightMatch(order.client.phone, searchQuery)}</div>
               )}
               {order.recipient?.phone && searchQuery.replace(/\D/g, '') && order.recipient.phone.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, '')) && (
                 <div>Тел. получателя: {highlightMatch(order.recipient.phone, searchQuery)}</div>
@@ -106,7 +93,7 @@ export function OrderItem({ order, onClick, onStatusChange, searchQuery }: Order
             </div>
           )}
         </div>
-        {order.status !== 'completed' && (
+        {order.status !== 'доставлен' && (
           <Button 
             variant="outline" 
             size="sm" 
@@ -118,9 +105,9 @@ export function OrderItem({ order, onClick, onStatusChange, searchQuery }: Order
         )}
       </div>
 
-      {order.executor?.florist && (
+      {order.executor?.name && (
         <div className="mb-3 text-gray-600">
-          {order.executor.florist}
+          Флорист: {order.executor.name}
         </div>
       )}
 

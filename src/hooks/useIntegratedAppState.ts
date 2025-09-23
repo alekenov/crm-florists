@@ -91,12 +91,12 @@ export function useIntegratedAppState() {
   // Convert backend data to frontend format using adapters
   const adaptedData = useMemo(() => {
     return {
-      customers: adaptBackendClientsToCustomers(apiState.clients),
+      customers: apiState.customers, // Прямое использование без адаптации
       products: adaptBackendProductsToProducts(apiState.products),
       inventory: adaptBackendInventoryToInventoryItems(apiState.inventory),
       orders: adaptBackendOrdersToOrders(apiState.orders)
     };
-  }, [apiState.clients, apiState.products, apiState.inventory, apiState.orders]);
+  }, [apiState.customers, apiState.products, apiState.inventory, apiState.orders]);
 
   // Tab navigation helper
   const setActiveTab = (tab: 'orders' | 'products' | 'inventory' | 'customers' | 'profile') => {
@@ -210,6 +210,7 @@ export function useIntegratedAppState() {
     // API refresh methods
     refetchAll: apiState.refetchAll,
     refetchClients: apiState.refetchClients,
+    refetchCustomers: apiState.refetchCustomers,
     refetchProducts: apiState.refetchProducts,
     refetchInventory: apiState.refetchInventory,
     refetchOrders: apiState.refetchOrders,

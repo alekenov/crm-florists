@@ -1,7 +1,7 @@
 // API Types - Backend integration types matching FastAPI schema
 
-// Order statuses from backend
-export type OrderStatus = 'новый' | 'в работе' | 'готов' | 'доставлен';
+// Order statuses from backend - direct SQLModel enum values
+export type OrderStatus = 'NEW' | 'IN_WORK' | 'READY' | 'DELIVERED' | 'PAID' | 'COLLECTED' | 'CANCELED';
 
 // Client types from backend
 export type ClientType = 'заказчик' | 'получатель' | 'оба';
@@ -31,6 +31,7 @@ export interface Client {
 export interface User {
   id: number;
   username: string;
+  name?: string;  // Имя пользователя из backend
   email: string;
   city: string;
   position: UserPosition;

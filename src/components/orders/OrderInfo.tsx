@@ -85,8 +85,8 @@ export function OrderInfo({
             <Label>Дата доставки</Label>
             {isEditing ? (
               <select
-                value={editableData?.deliveryDate || order.deliveryDate}
-                onChange={(e) => handleChange('deliveryDate', e.target.value)}
+                value={editableData?.delivery_date || order.deliveryDate}
+                onChange={(e) => handleChange('delivery_date', e.target.value)}
                 className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="Сегодня">Сегодня</option>
@@ -105,8 +105,8 @@ export function OrderInfo({
             {isEditing ? (
               <Input
                 type="text"
-                value={editableData?.address || order.deliveryAddress || ''}
-                onChange={(e) => handleChange('address', e.target.value)}
+                value={editableData?.delivery_address || order.deliveryAddress || ''}
+                onChange={(e) => handleChange('delivery_address', e.target.value)}
                 className="mt-1"
               />
             ) : (
@@ -120,8 +120,8 @@ export function OrderInfo({
             <Label>Время доставки</Label>
             {isEditing ? (
               <select
-                value={editableData?.deliveryTimeRange || order.deliveryTimeRange || order.deliveryTime || ''}
-                onChange={(e) => handleChange('deliveryTimeRange', e.target.value)}
+                value={editableData?.delivery_time_range || order.deliveryTimeRange || order.deliveryTime || ''}
+                onChange={(e) => handleChange('delivery_time_range', e.target.value)}
                 className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="">Выберите время</option>

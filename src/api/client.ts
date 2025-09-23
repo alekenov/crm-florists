@@ -136,7 +136,7 @@ class APIClient {
   async updateOrderStatus(id: number, status: OrderStatus): Promise<ApiOrder> {
     return this.request(`/api/orders/${id}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ new_status: status }),
     });
   }
 
@@ -164,7 +164,7 @@ class APIClient {
 
   async updateClient(id: number, data: UpdateClientRequest): Promise<Client> {
     return this.request(`/api/clients/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   }
@@ -225,6 +225,53 @@ class APIClient {
     return this.getUsers({ position: 'Курьер', city });
   }
 
+  // Profile API
+  async getProfile(): Promise<User> {
+    return this.request('/api/profile/me');
+  }
+
+  async updateProfile(data: Partial<User>): Promise<User> {
+    return this.request('/api/profile/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getColleagues(): Promise<User[]> {
+    return this.request('/api/colleagues');
+  }
+
+  async createColleague(data: any): Promise<User> {
+    return this.request('/api/colleagues', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateColleague(id: number, data: any): Promise<User> {
+    return this.request(`/api/colleagues/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteColleague(id: number): Promise<void> {
+    return this.request(`/api/colleagues/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getShop(): Promise<any> {
+    return this.request('/api/shop');
+  }
+
+  async updateShop(data: any): Promise<any> {
+    return this.request('/api/shop', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Statistics API
   async getDashboardStats(): Promise<DashboardStats> {
     return this.request('/api/stats/dashboard');
@@ -249,6 +296,11 @@ class APIClient {
 
   async getLowStockItems(): Promise<InventoryResponse> {
     return this.getInventory({ low_stock_only: true });
+  }
+
+  // Customers API для фронтенда (прямая интеграция без маппинга)
+  async getCustomers(): Promise<any[]> {
+    return this.request('/api/customers');
   }
 
   // Generic HTTP methods for backward compatibility

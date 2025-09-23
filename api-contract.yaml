@@ -1,0 +1,1023 @@
+openapi: 3.1.0
+info:
+  title: CRM for Florists API
+  description: API для системы управления цветочным бизнесом
+  version: 2.0.0
+servers:
+- url: http://localhost:8011
+  description: Development server
+paths:
+  /api/clients/:
+    get:
+      summary: Get Clients
+      description: Получить список клиентов с фильтрацией
+      tags:
+      - clients
+      operationId: get_clients_api_clients__get
+      parameters:
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      - name: client_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Client Type
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    post:
+      summary: Create Client
+      description: Создать нового клиента
+      tags:
+      - clients
+      operationId: create_client_api_clients__post
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Client'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/clients/{client_id}:
+    get:
+      summary: Get Client
+      description: Получить клиента по ID
+      tags:
+      - clients
+      operationId: get_client_api_clients__client_id__get
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    put:
+      summary: Update Client
+      description: Обновить клиента
+      tags:
+      - clients
+      operationId: update_client_api_clients__client_id__put
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Client'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    delete:
+      summary: Delete Client
+      description: Удалить клиента
+      tags:
+      - clients
+      operationId: delete_client_api_clients__client_id__delete
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/clients/{client_id}/orders:
+    get:
+      summary: Get Client Orders
+      description: Получить заказы клиента
+      tags:
+      - clients
+      operationId: get_client_orders_api_clients__client_id__orders_get
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/products/:
+    get:
+      summary: Get Products
+      description: Получить список продуктов
+      tags:
+      - products
+      operationId: get_products_api_products__get
+      parameters:
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+      - name: min_price
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Price
+      - name: max_price
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Max Price
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    post:
+      summary: Create Product
+      description: Создать новый продукт
+      tags:
+      - products
+      operationId: create_product_api_products__post
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/products/{product_id}:
+    get:
+      summary: Get Product
+      description: Получить продукт по ID
+      tags:
+      - products
+      operationId: get_product_api_products__product_id__get
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Product Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    put:
+      summary: Update Product
+      description: Обновить продукт
+      tags:
+      - products
+      operationId: update_product_api_products__product_id__put
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Product Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    delete:
+      summary: Delete Product
+      description: Удалить продукт
+      tags:
+      - products
+      operationId: delete_product_api_products__product_id__delete
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Product Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/inventory/:
+    get:
+      summary: Get Inventory
+      description: Получить список складских позиций
+      tags:
+      - inventory
+      operationId: get_inventory_api_inventory__get
+      parameters:
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: low_stock
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Low Stock
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    post:
+      summary: Create Inventory Item
+      description: Создать новую складскую позицию
+      tags:
+      - inventory
+      operationId: create_inventory_item_api_inventory__post
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inventory'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/inventory/{inventory_id}:
+    get:
+      summary: Get Inventory Item
+      description: Получить складскую позицию по ID
+      tags:
+      - inventory
+      operationId: get_inventory_item_api_inventory__inventory_id__get
+      parameters:
+      - name: inventory_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Inventory Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    put:
+      summary: Update Inventory Item
+      description: Обновить складскую позицию
+      tags:
+      - inventory
+      operationId: update_inventory_item_api_inventory__inventory_id__put
+      parameters:
+      - name: inventory_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Inventory Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inventory'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    delete:
+      summary: Delete Inventory Item
+      description: Удалить складскую позицию
+      tags:
+      - inventory
+      operationId: delete_inventory_item_api_inventory__inventory_id__delete
+      parameters:
+      - name: inventory_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Inventory Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/orders/:
+    get:
+      summary: Get Orders
+      description: Получить список заказов
+      tags:
+      - orders
+      operationId: get_orders_api_orders__get
+      parameters:
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: client_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date To
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    post:
+      summary: Create Order
+      description: Создать новый заказ
+      tags:
+      - orders
+      operationId: create_order_api_orders__post
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/orders/{order_id}:
+    get:
+      summary: Get Order
+      description: Получить заказ по ID с полной информацией
+      tags:
+      - orders
+      operationId: get_order_api_orders__order_id__get
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    put:
+      summary: Update Order
+      description: Обновить заказ
+      tags:
+      - orders
+      operationId: update_order_api_orders__order_id__put
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    patch:
+      summary: Patch Order
+      description: Частично обновить заказ
+      tags:
+      - orders
+      operationId: patch_order_api_orders__order_id__patch
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: Order Update
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+    delete:
+      summary: Delete Order
+      description: Удалить заказ
+      tags:
+      - orders
+      operationId: delete_order_api_orders__order_id__delete
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/orders/{order_id}/status:
+    put:
+      summary: Update Order Status
+      description: Обновить статус заказа
+      tags:
+      - orders
+      operationId: update_order_status_api_orders__order_id__status_put
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusUpdateRequest'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/orders/{order_id}/items:
+    post:
+      summary: Add Order Item
+      description: Добавить позицию в заказ
+      tags:
+      - orders
+      operationId: add_order_item_api_orders__order_id__items_post
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderItem'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/orders/{order_id}/items/{item_id}:
+    delete:
+      summary: Delete Order Item
+      description: Удалить позицию из заказа
+      tags:
+      - orders
+      operationId: delete_order_item_api_orders__order_id__items__item_id__delete
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/stats/dashboard:
+    get:
+      summary: Get Dashboard Stats
+      description: Получить статистику для дашборда
+      tags:
+      - statistics
+      operationId: get_dashboard_stats_api_stats_dashboard_get
+      parameters: []
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /api/stats/sales:
+    get:
+      summary: Get Sales Stats
+      description: Получить статистику продаж
+      tags:
+      - statistics
+      operationId: get_sales_stats_api_stats_sales_get
+      parameters:
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date To
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /:
+    get:
+      summary: Root
+      description: null
+      tags: []
+      operationId: root__get
+      parameters: []
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+  /health:
+    get:
+      summary: Health Check
+      description: null
+      tags: []
+      operationId: health_check_health_get
+      parameters: []
+      requestBody: null
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+components:
+  schemas:
+    Client:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        phone:
+          type: string
+          title: Phone
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Email
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+        client_type:
+          allOf:
+          - $ref: '#/components/schemas/ClientType'
+          default: оба
+        notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - phone
+      title: Client
+      description: Модель клиента (заказчик/получатель)
+    ClientType:
+      type: string
+      enum:
+      - заказчик
+      - получатель
+      - оба
+      title: ClientType
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    Inventory:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        name:
+          type: string
+          title: Name
+        quantity:
+          type: number
+          title: Quantity
+        unit:
+          type: string
+          title: Unit
+        min_quantity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Quantity
+        price_per_unit:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Price Per Unit
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - name
+      - quantity
+      - unit
+      title: Inventory
+      description: Модель складского учета
+    Order:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        client_id:
+          type: integer
+          title: Client Id
+        recipient_id:
+          type: integer
+          title: Recipient Id
+        executor_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Executor Id
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OrderStatus'
+          default: новый
+        delivery_date:
+          type: string
+          format: date-time
+          title: Delivery Date
+        delivery_address:
+          type: string
+          title: Delivery Address
+        delivery_time_range:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Delivery Time Range
+        total_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Total Price
+        comment:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Comment
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - client_id
+      - recipient_id
+      - delivery_date
+      - delivery_address
+      title: Order
+      description: Модель заказа
+    OrderItem:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        order_id:
+          type: integer
+          title: Order Id
+        product_id:
+          type: integer
+          title: Product Id
+        quantity:
+          type: integer
+          title: Quantity
+          default: 1
+        price:
+          type: number
+          title: Price
+      type: object
+      required:
+      - order_id
+      - product_id
+      - price
+      title: OrderItem
+      description: Модель позиции заказа
+    OrderStatus:
+      type: string
+      enum:
+      - новый
+      - в работе
+      - готов
+      - доставлен
+      - оплачен
+      - собран
+      - отменен
+      title: OrderStatus
+    Product:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        price:
+          type: number
+          title: Price
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        preparation_time:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Preparation Time
+        image_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Image Url
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - name
+      - price
+      - category
+      title: Product
+      description: Модель товара/продукта
+    ProductCategory:
+      type: string
+      enum:
+      - букет
+      - композиция
+      - горшечный
+      title: ProductCategory
+    StatusUpdateRequest:
+      properties:
+        new_status:
+          type: string
+          title: New Status
+        comment:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Comment
+      type: object
+      required:
+      - new_status
+      title: StatusUpdateRequest
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
