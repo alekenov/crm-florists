@@ -221,6 +221,7 @@ export function AppRouter() {
             onUpdateItem={(itemId, updates) => {
               console.log('Update inventory item:', itemId, updates);
             }}
+            onRefreshInventory={state.refetchInventory}
           />
         </AppWrapper>
       );

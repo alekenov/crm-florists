@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { ArrowLeft, Minus, Plus, Calendar, Package, Camera, Upload, DollarSign, History, Settings } from "lucide-react";
 import { toast } from "sonner@2.0.3";
+import { inventoryTransactionService } from '../api/services';
 import { useInventoryDetail } from "../hooks/useDetailData";
 import { adaptBackendInventoryToInventoryItem } from "../adapters/dataAdapters";
 import { useIntegratedAppState } from "../hooks/useIntegratedAppState";
 
 interface InventoryTransaction {
   id: number;
-  type: 'consumption' | 'adjustment' | 'waste';
+  type: 'consumption' | 'adjustment' | 'waste' | 'price_change' | 'supply';
   quantity: number;
   comment: string;
   date: Date;
@@ -107,6 +108,8 @@ function getTransactionTypeLabel(type: string): string {
     case 'consumption': return 'Расход';
     case 'adjustment': return 'Корректировка';
     case 'waste': return 'Списание';
+    case 'price_change': return 'Изменение цены';
+    case 'supply': return 'Поставка';
     default: return type;
   }
 }
@@ -116,6 +119,8 @@ function getTransactionTypeColor(type: string): string {
     case 'consumption': return 'bg-blue-100 text-blue-700';
     case 'adjustment': return 'bg-orange-100 text-orange-700';
     case 'waste': return 'bg-red-100 text-red-700';
+    case 'price_change': return 'bg-purple-100 text-purple-700';
+    case 'supply': return 'bg-green-100 text-green-700';
     default: return 'bg-gray-100 text-gray-700';
   }
 }
@@ -123,7 +128,16 @@ function getTransactionTypeColor(type: string): string {
 export function InventoryItemDetail({ itemId, onClose, onUpdateItem, onRefreshInventory }: InventoryItemDetailProps) {
   // Fetch individual inventory data
   const { data: backendInventoryItem, loading, error, refetch } = useInventoryDetail(itemId);
-  const [transactions] = useState<InventoryTransaction[]>(mockTransactions); // Mock for now
+  const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+
+  // Debug logging
+  console.log('InventoryItemDetail Debug:', {
+    itemId,
+    backendInventoryItem,
+    loading,
+    error
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [editedCostPrice, setEditedCostPrice] = useState('');
   const [editedRetailPrice, setEditedRetailPrice] = useState('');
@@ -148,6 +162,40 @@ export function InventoryItemDetail({ itemId, onClose, onUpdateItem, onRefreshIn
       setEditedRetailPrice(item.retailPrice || item.price || '');
     }
   }, [item?.id, item?.costPrice, item?.retailPrice, item?.price]);
+
+  // Load transactions when item changes
+  useEffect(() => {
+    if (itemId && itemId !== -1) {
+      setLoadingTransactions(true);
+      inventoryTransactionService.getTransactions(itemId)
+        .then(data => {
+          // Transform backend transactions to frontend format
+          const formattedTransactions: InventoryTransaction[] = data.map(t => ({
+            id: t.id,
+            type: t.type === 'audit' ? 'adjustment' :
+                  t.type === 'waste' ? 'waste' :
+                  t.type === 'consumption' ? 'consumption' :
+                  t.type === 'supply' ? 'supply' :
+                  t.type === 'price_change' ? 'price_change' : 'adjustment',
+            quantity: t.quantity,
+            comment: t.comment,
+            // Add 'Z' to indicate UTC time if not already present
+            date: new Date(t.date.includes('Z') || t.date.includes('+') ? t.date : t.date + 'Z'),
+            referenceType: t.referenceType,
+            referenceId: t.referenceId
+          }));
+          setTransactions(formattedTransactions);
+        })
+        .catch(error => {
+          console.error('Error loading transactions:', error);
+          // Fall back to empty array on error
+          setTransactions([]);
+        })
+        .finally(() => {
+          setLoadingTransactions(false);
+        });
+    }
+  }, [itemId]);
 
   // Handle loading state
   if (loading) {
@@ -212,7 +260,7 @@ export function InventoryItemDetail({ itemId, onClose, onUpdateItem, onRefreshIn
           updateData.cost_price = parseFloat(editedCostPrice.replace(/[^\d.]/g, ''));
         }
         if (editedRetailPrice !== (item.retailPrice || item.price)) {
-          updateData.price = parseFloat(editedRetailPrice.replace(/[^\d.]/g, ''));
+          updateData.price_per_unit = parseFloat(editedRetailPrice.replace(/[^\d.]/g, ''));
         }
 
         // Update inventory item through API
@@ -232,33 +280,50 @@ export function InventoryItemDetail({ itemId, onClose, onUpdateItem, onRefreshIn
     }
   };
 
-  const handleWriteOff = () => {
+  const handleWriteOff = async () => {
     const quantity = parseInt(writeOffQuantity);
     if (quantity > 0 && quantity <= item.quantity && writeOffComment.trim()) {
-      // Создаем новую транзакцию
-      const newTransaction: InventoryTransaction = {
-        id: transactions.length + 1,
-        type: 'waste',
-        quantity: -quantity,
-        comment: writeOffComment,
-        date: new Date()
-      };
-      
-      // Обновляем остаток
-      setItem(prev => ({
-        ...prev,
-        quantity: prev.quantity - quantity
-      }));
+      try {
+        // Call API to write off inventory
+        await inventoryTransactionService.writeOff(itemId, quantity, writeOffComment);
 
-      // Сбрасываем форму
-      setWriteOffQuantity('');
-      setWriteOffComment('');
-      setShowWriteOff(false);
+        // Refresh inventory data
+        await refetch();
 
-      console.log('Write off transaction:', newTransaction);
-      
-      if (onUpdateItem) {
-        onUpdateItem(itemId, { quantity: item.quantity - quantity });
+        // Reload transactions
+        const updatedTransactions = await inventoryTransactionService.getTransactions(itemId);
+        const formattedTransactions: InventoryTransaction[] = updatedTransactions.map(t => ({
+          id: t.id,
+          type: t.type === 'audit' ? 'adjustment' :
+                t.type === 'waste' ? 'waste' :
+                t.type === 'consumption' ? 'consumption' :
+                t.type === 'supply' ? 'supply' :
+                t.type === 'price_change' ? 'price_change' : 'adjustment',
+          quantity: t.quantity,
+          comment: t.comment,
+          // Add 'Z' to indicate UTC time if not already present
+          date: new Date(t.date.includes('Z') || t.date.includes('+') ? t.date : t.date + 'Z'),
+          referenceType: t.referenceType,
+          referenceId: t.referenceId
+        }));
+        setTransactions(formattedTransactions);
+
+        // Сбрасываем форму
+        setWriteOffQuantity('');
+        setWriteOffComment('');
+        setShowWriteOff(false);
+
+        toast.success('Товар успешно списан');
+
+        // Refresh inventory list to show updated quantity
+        await onRefreshInventory?.();
+
+        if (onUpdateItem && item) {
+          onUpdateItem(itemId, { quantity: item.quantity - quantity });
+        }
+      } catch (error) {
+        console.error('Error writing off inventory:', error);
+        toast.error('Ошибка при списании товара');
       }
     }
   };
