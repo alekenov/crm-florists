@@ -1,13 +1,10 @@
 import { TrendingUp, ShoppingBag, Receipt } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-
-interface Customer {
-  totalOrders: number;
-  totalSpent: number;
-}
+import { useOrders } from "../../hooks/useApiOrders";
+import { useMemo } from "react";
 
 interface CustomerStatsProps {
-  customer: Customer;
+  customerId: number;
 }
 
 function formatCurrency(amount: number): string {
@@ -18,25 +15,61 @@ function formatCurrency(amount: number): string {
   }).format(amount).replace('KZT', '₸');
 }
 
-export function CustomerStats({ customer }: CustomerStatsProps) {
+export function CustomerStats({ customerId }: CustomerStatsProps) {
+  // Fetch orders for this customer from API
+  const { orders: customerOrders = [], loading: ordersLoading } = useOrders(
+    customerId ? { client_id: customerId } : undefined
+  );
+
+  // Calculate statistics from real orders
+  const stats = useMemo(() => {
+    const totalOrders = customerOrders.length;
+    const totalSpent = customerOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    const averageCheck = totalOrders > 0 ? Math.round(totalSpent / totalOrders) : 0;
+
+    return {
+      totalOrders,
+      totalSpent,
+      averageCheck
+    };
+  }, [customerOrders]);
+
+  // Format order count text
+  const getOrderCountText = (count: number) => {
+    if (count === 1) return 'заказ';
+    if (count < 5) return 'заказа';
+    return 'заказов';
+  };
+
+  if (ordersLoading) {
+    return (
+      <div className="p-4 border-b border-gray-100">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-24 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-16 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Mobile Stats */}
       <div className="lg:hidden p-4 border-b border-gray-100">
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-gray-900">{customer.totalOrders}</div>
+            <div className="text-gray-900">{stats.totalOrders}</div>
             <div className="text-gray-500">
-              {customer.totalOrders === 1 ? 'заказ' : customer.totalOrders < 5 ? 'заказа' : 'заказов'}
+              {getOrderCountText(stats.totalOrders)}
             </div>
           </div>
           <div className="text-center">
-            <div className="text-gray-900">{formatCurrency(customer.totalSpent)}</div>
+            <div className="text-gray-900">{formatCurrency(stats.totalSpent)}</div>
             <div className="text-gray-500">потрачено</div>
           </div>
           <div className="text-center">
             <div className="text-gray-900">
-              {Math.round(customer.totalSpent / customer.totalOrders)}₸
+              {stats.averageCheck}₸
             </div>
             <div className="text-gray-500">средний чек</div>
           </div>
@@ -60,11 +93,11 @@ export function CustomerStats({ customer }: CustomerStatsProps) {
                 </div>
                 <div>
                   <div className="text-gray-600">Заказов</div>
-                  <div className="text-gray-900">{customer.totalOrders}</div>
+                  <div className="text-gray-900">{stats.totalOrders}</div>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -72,11 +105,11 @@ export function CustomerStats({ customer }: CustomerStatsProps) {
                 </div>
                 <div>
                   <div className="text-gray-600">Потрачено</div>
-                  <div className="text-gray-900">{formatCurrency(customer.totalSpent)}</div>
+                  <div className="text-gray-900">{formatCurrency(stats.totalSpent)}</div>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -85,7 +118,7 @@ export function CustomerStats({ customer }: CustomerStatsProps) {
                 <div>
                   <div className="text-gray-600">Средний чек</div>
                   <div className="text-gray-900">
-                    {Math.round(customer.totalSpent / customer.totalOrders)}₸
+                    {stats.averageCheck}₸
                   </div>
                 </div>
               </div>

@@ -192,6 +192,29 @@ class APIClient {
     });
   }
 
+  // Product Composition API
+  async getProductComposition(productId: number): Promise<any[]> {
+    return this.request(`/api/products/${productId}/composition`);
+  }
+
+  async addProductComposition(productId: number, inventoryId: number, quantityNeeded: number): Promise<any> {
+    return this.request(`/api/products/${productId}/composition?inventory_id=${inventoryId}&quantity_needed=${quantityNeeded}`, {
+      method: 'POST',
+    });
+  }
+
+  async updateProductComposition(productId: number, compositionId: number, quantityNeeded: number): Promise<any> {
+    return this.request(`/api/products/${productId}/composition/${compositionId}?quantity_needed=${quantityNeeded}`, {
+      method: 'PUT',
+    });
+  }
+
+  async deleteProductComposition(productId: number, compositionId: number): Promise<void> {
+    return this.request(`/api/products/${productId}/composition/${compositionId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Inventory API
   async getInventory(params?: InventoryQueryParams): Promise<InventoryResponse> {
     return this.request('/api/inventory', { params });
@@ -205,6 +228,19 @@ class APIClient {
     return this.request('/api/inventory', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async updateInventoryItem(id: number, data: any): Promise<ApiInventoryItem> {
+    return this.request(`/api/inventory/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteInventoryItem(id: number): Promise<void> {
+    return this.request(`/api/inventory/${id}`, {
+      method: 'DELETE',
     });
   }
 

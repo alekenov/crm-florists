@@ -155,6 +155,10 @@ export function adaptBackendInventoryToInventoryItem(backendInventory: BackendIn
     lastDelivery: new Date(backendInventory.created_at),
     image: getInventoryImage(backendInventory.name),
 
+    // Price fields for InventoryItemDetail component
+    costPrice: backendInventory.cost_price ? `${backendInventory.cost_price} ₸` : `${(backendInventory.price_per_unit * 0.7).toFixed(0)} ₸`,
+    retailPrice: `${backendInventory.price_per_unit} ₸`,
+
     // Additional fields for compatibility
     minQuantity: backendInventory.min_quantity || undefined,
     pricePerUnit: backendInventory.price_per_unit || undefined,

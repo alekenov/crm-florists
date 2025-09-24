@@ -6,11 +6,13 @@ import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
-import { formatDate, formatOrderDate } from '../src/utils/date';
+import { formatDate, formatOrderDate } from '../utils/date';
 import { useClientDetail } from "../hooks/useDetailData";
 import { adaptBackendClientToCustomer } from "../adapters/dataAdapters";
 import { useIntegratedAppState } from "../hooks/useIntegratedAppState";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
+import { useOrders } from "../hooks/useApiOrders";
+import { Order as ApiOrder } from "../types";
 
 interface Customer {
   id: number;
@@ -22,19 +24,6 @@ interface Customer {
   lastOrderDate: Date;
   status: 'active' | 'vip' | 'inactive';
   notes?: string;
-}
-
-interface Order {
-  id: string;
-  number: string;
-  date: Date;
-  total: number;
-  status: 'pending' | 'confirmed' | 'in_progress' | 'ready' | 'delivered' | 'cancelled';
-  items: Array<{
-    name: string;
-    quantity: number;
-    price: number;
-  }>;
 }
 
 interface CustomerDetailProps {
@@ -68,6 +57,11 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
   // State and actions
   const { apiActions } = useIntegratedAppState();
 
+  // Fetch orders for this customer
+  const orderParams = customerId ? { client_id: Number(customerId) } : undefined;
+  console.log('CustomerDetail: Fetching orders with params:', orderParams, 'customerId:', customerId);
+  const { orders: customerOrders = [], loading: ordersLoading } = useOrders(orderParams);
+
   // Convert backend client to frontend format using useMemo to prevent re-renders
   const customer = useMemo(() => {
     return backendClient ? adaptBackendClientToCustomer(backendClient) : null;
@@ -83,12 +77,12 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
   }, [customer?.id, customer?.notes, customer?.name, customer?.phone]);
 
   // Handle loading state
-  if (loading) {
+  if (loading || ordersLoading) {
     return (
       <div className="bg-white min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка клиента...</p>
+          <p className="text-gray-600">{loading ? 'Загрузка клиента...' : 'Загрузка заказов...'}</p>
         </div>
       </div>
     );
@@ -131,16 +125,15 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
   };
 
   const orderStatusConfig = {
+    new: { label: 'Новый', color: 'bg-blue-100 text-blue-700' },
     pending: { label: 'Ожидает', color: 'bg-yellow-100 text-yellow-700' },
     confirmed: { label: 'Подтвержден', color: 'bg-blue-100 text-blue-700' },
     in_progress: { label: 'В работе', color: 'bg-orange-100 text-orange-700' },
     ready: { label: 'Готов', color: 'bg-green-100 text-green-700' },
     delivered: { label: 'Доставлен', color: 'bg-gray-100 text-gray-700' },
-    cancelled: { label: 'Отменен', color: 'bg-red-100 text-red-700' }
+    cancelled: { label: 'Отменен', color: 'bg-red-100 text-red-700' },
+    completed: { label: 'Выполнен', color: 'bg-green-100 text-green-700' }
   };
-
-  // В реальном приложении заказы будут загружаться через API
-  const customerOrders: Order[] = [];
 
   const handleSaveNotes = async () => {
     if (customer) {
@@ -475,47 +468,57 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {customerOrders.map((order) => (
-                            <TableRow 
-                              key={order.id}
-                              className="cursor-pointer hover:bg-gray-50"
-                              onClick={() => onViewOrder?.(order.id)}
-                            >
-                              <TableCell>
-                                <div className="font-medium">#{order.number}</div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm text-gray-600">
-                                  {formatOrderDate(order.date)}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  {order.items.length === 1 ? (
-                                    order.items[0].name
-                                  ) : (
-                                    `${order.items[0].name}${order.items.length > 1 ? ` +${order.items.length - 1}` : ''}`
-                                  )}
-                                </div>
-                                {order.items.length > 1 && (
-                                  <div className="text-xs text-gray-400">
-                                    {order.items.length} позиций в заказе
+                          {customerOrders.map((order: ApiOrder) => {
+                            const orderItems = order.items || [];
+                            const totalAmount = order.totalPrice || 0;
+                            const orderDate = order.createdAt || new Date();
+                            const status = order.status?.toLowerCase() || 'new';
+                            const statusConfig = orderStatusConfig[status] || orderStatusConfig.new;
+
+                            return (
+                              <TableRow
+                                key={order.id}
+                                className="cursor-pointer hover:bg-gray-50"
+                                onClick={() => onViewOrder?.(order.id)}
+                              >
+                                <TableCell>
+                                  <div className="font-medium">#{order.number}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm text-gray-600">
+                                    {formatOrderDate(orderDate)}
                                   </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="font-medium">{formatCurrency(order.total)}</div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge 
-                                  variant="secondary" 
-                                  className={`text-xs ${orderStatusConfig[order.status].color}`}
-                                >
-                                  {orderStatusConfig[order.status].label}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    {orderItems.length === 0 ? (
+                                      order.mainProduct?.title || 'Товар'
+                                    ) : orderItems.length === 1 ? (
+                                      orderItems[0].product?.name || orderItems[0].productName || 'Товар'
+                                    ) : (
+                                      `${orderItems[0].product?.name || orderItems[0].productName || 'Товар'}${orderItems.length > 1 ? ` +${orderItems.length - 1}` : ''}`
+                                    )}
+                                  </div>
+                                  {orderItems.length > 1 && (
+                                    <div className="text-xs text-gray-400">
+                                      {orderItems.length} позиций в заказе
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{formatCurrency(totalAmount)}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="secondary"
+                                    className={`text-xs ${statusConfig.color}`}
+                                  >
+                                    {statusConfig.label}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
@@ -691,41 +694,51 @@ export function CustomerDetail({ customerId, onClose, onUpdateCustomer, onViewOr
 
           {customerOrders.length > 0 ? (
             <div className="space-y-3">
-              {customerOrders.map((order) => (
-                <div 
-                  key={order.id}
-                  className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => onViewOrder?.(order.id)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-900">#{order.number}</span>
-                      <div className={`px-2 py-0.5 rounded text-xs ${orderStatusConfig[order.status].color}`}>
-                        {orderStatusConfig[order.status].label}
+              {customerOrders.map((order: ApiOrder) => {
+                const orderItems = order.items || [];
+                const totalAmount = order.totalPrice || 0;
+                const orderDate = order.createdAt || new Date();
+                const status = order.status?.toLowerCase() || 'new';
+                const statusConfig = orderStatusConfig[status] || orderStatusConfig.new;
+
+                return (
+                  <div
+                    key={order.id}
+                    className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => onViewOrder?.(order.id)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900">#{order.number}</span>
+                        <div className={`px-2 py-0.5 rounded text-xs ${statusConfig.color}`}>
+                          {statusConfig.label}
+                        </div>
                       </div>
+                      <span className="text-gray-900">{formatCurrency(totalAmount)}</span>
                     </div>
-                    <span className="text-gray-900">{formatCurrency(order.total)}</span>
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 mb-1">
-                    {formatOrderDate(order.date)}
-                  </div>
-                  
-                  <div className="text-sm text-gray-500">
-                    {order.items.length === 1 ? (
-                      order.items[0].name
-                    ) : (
-                      `${order.items[0].name}${order.items.length > 1 ? ` +${order.items.length - 1}` : ''}`
+
+                    <div className="text-sm text-gray-600 mb-1">
+                      {formatOrderDate(orderDate)}
+                    </div>
+
+                    <div className="text-sm text-gray-500">
+                      {orderItems.length === 0 ? (
+                        order.mainProduct?.title || 'Товар'
+                      ) : orderItems.length === 1 ? (
+                        orderItems[0].product?.name || orderItems[0].productName || 'Товар'
+                      ) : (
+                        `${orderItems[0].product?.name || orderItems[0].productName || 'Товар'}${orderItems.length > 1 ? ` +${orderItems.length - 1}` : ''}`
+                      )}
+                    </div>
+
+                    {orderItems.length > 1 && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        {orderItems.length} позиций в заказе
+                      </div>
                     )}
                   </div>
-                  
-                  {order.items.length > 1 && (
-                    <div className="text-xs text-gray-400 mt-1">
-                      {order.items.length} позиций в заказе
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8">

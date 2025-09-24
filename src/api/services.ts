@@ -207,11 +207,8 @@ export const productCompositionService = {
   },
 
   async updateComposition(productId: number, compositionId: number, quantityNeeded: number): Promise<any> {
-    return apiClient.put<any>(`/api/products/${productId}/composition/${compositionId}`, null, {
-      params: {
-        quantity_needed: quantityNeeded
-      }
-    });
+    const url = `/api/products/${productId}/composition/${compositionId}?quantity_needed=${quantityNeeded}`;
+    return apiClient.put<any>(url);
   },
 
   async deleteComposition(productId: number, compositionId: number): Promise<void> {
@@ -226,6 +223,36 @@ export const initService = {
   }
 };
 
+// ============== INVENTORY AUDIT SERVICES ==============
+export const inventoryAuditService = {
+  async startAudit(): Promise<any> {
+    return apiClient.post<any>('/api/inventory/audit/start');
+  },
+
+  async getCurrentAudit(): Promise<any> {
+    return apiClient.get<any>('/api/inventory/audit/current');
+  },
+
+  async saveAuditItems(auditId: number, items: any[]): Promise<any> {
+    return apiClient.post<any>(`/api/inventory/audit/${auditId}/items`, items);
+  },
+
+  async completeAudit(auditId: number): Promise<any> {
+    return apiClient.post<any>(`/api/inventory/audit/${auditId}/complete`);
+  }
+};
+
+// ============== INVENTORY TRANSACTION SERVICES ==============
+export const inventoryTransactionService = {
+  async getTransactions(inventoryId: number): Promise<any[]> {
+    return apiClient.get<any[]>(`/api/inventory/${inventoryId}/transactions`);
+  },
+
+  async writeOff(inventoryId: number, quantity: number, comment: string): Promise<any> {
+    return apiClient.post<any>(`/api/inventory/${inventoryId}/write-off`, { quantity, comment });
+  }
+};
+
 // Export all services
 export {
   clientService as clients,
@@ -235,5 +262,6 @@ export {
   userService as users,
   statsService as stats,
   initService as init,
-  productCompositionService as productComposition
+  productCompositionService as productComposition,
+  inventoryAuditService as inventoryAudit
 };

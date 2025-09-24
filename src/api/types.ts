@@ -84,6 +84,7 @@ export interface Inventory {
   unit: 'шт' | 'м' | 'кг';
   min_quantity?: number;
   price_per_unit?: number;
+  cost_price?: number;
   created_at: string;
 }
 
@@ -93,6 +94,7 @@ export interface InventoryCreate {
   unit: 'шт' | 'м' | 'кг';
   min_quantity?: number;
   price_per_unit?: number;
+  cost_price?: number;
 }
 
 export interface InventoryUpdate {
@@ -101,6 +103,7 @@ export interface InventoryUpdate {
   unit?: 'шт' | 'м' | 'кг';
   min_quantity?: number;
   price_per_unit?: number;
+  cost_price?: number;
 }
 
 // ============== ORDER TYPES ==============

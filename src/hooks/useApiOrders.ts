@@ -49,7 +49,15 @@ export function useOrders(params?: OrdersQueryParams): UseOrdersResult {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, [
+    params?.client_id,
+    params?.status,
+    params?.executor_id,
+    params?.date_from,
+    params?.date_to,
+    params?.skip,
+    params?.limit
+  ]);
 
   const createOrder = useCallback(async (data: CreateOrderRequest): Promise<Order> => {
     try {

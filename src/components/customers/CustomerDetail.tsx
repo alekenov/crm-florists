@@ -131,9 +131,9 @@ export function CustomerDetail({
             {/* Left Column - Customer Info & Stats */}
             <div className="xl:col-span-1 space-y-6">
               <CustomerInfo customer={customer} onUpdateCustomer={handleUpdateCustomerInfo} />
-              <CustomerStats customer={customer} />
-              <CustomerNotes 
-                customer={customer} 
+              <CustomerStats customerId={customerId} />
+              <CustomerNotes
+                customer={customer}
                 onUpdateNotes={handleUpdateNotes}
               />
             </div>
@@ -152,9 +152,9 @@ export function CustomerDetail({
       {/* Mobile Layout */}
       <div className="lg:hidden pb-6">
         <CustomerInfo customer={customer} onUpdateCustomer={handleUpdateCustomerInfo} />
-        <CustomerStats customer={customer} />
-        <CustomerNotes 
-          customer={customer} 
+        <CustomerStats customerId={customerId} />
+        <CustomerNotes
+          customer={customer}
           onUpdateNotes={handleUpdateNotes}
         />
         <div className="p-4">

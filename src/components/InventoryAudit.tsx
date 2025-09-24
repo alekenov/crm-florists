@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Progress } from "./ui/progress";
 import { ArrowLeft, CheckCircle, AlertTriangle, Package, Save, Clipboard, Info } from "lucide-react";
+import { inventoryAuditService } from "../api/services";
+import { toast } from "sonner@2.0.3";
 
 interface InventoryItem {
   id: number;
@@ -180,14 +182,69 @@ function AuditItemComponent({
 }
 
 export function InventoryAudit({ onClose, onSaveAudit }: InventoryAuditProps) {
-  const [auditItems, setAuditItems] = useState<InventoryAuditItem[]>(
-    mockInventoryItems.map(item => ({
-      ...item,
-      actualQuantity: 0,
-      difference: 0,
-      status: 'pending' as const
-    }))
-  );
+  const [auditId, setAuditId] = useState<number | null>(null);
+  const [auditItems, setAuditItems] = useState<InventoryAuditItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load or create audit on mount
+  useEffect(() => {
+    const loadOrCreateAudit = async () => {
+      try {
+        // First try to get current audit
+        let audit = await inventoryAuditService.getCurrentAudit();
+
+        // If no current audit, start a new one
+        if (!audit) {
+          audit = await inventoryAuditService.startAudit();
+          toast.success("Новая инвентаризация начата");
+        }
+
+        if (audit && audit.items) {
+          setAuditId(audit.id);
+          // Transform API data to component format
+          const transformedItems = audit.items.map((item: any) => ({
+            id: item.inventory_id,
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            systemQuantity: item.system_quantity,
+            actualQuantity: item.actual_quantity || 0,
+            difference: item.difference || 0,
+            status: getItemStatus(item.system_quantity, item.actual_quantity),
+            image: getItemImage(item.name, item.category)
+          }));
+          setAuditItems(transformedItems);
+        }
+      } catch (error) {
+        console.error("Error loading audit:", error);
+        toast.error("Ошибка загрузки инвентаризации");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrCreateAudit();
+  }, []);
+
+  const getItemStatus = (systemQty: number, actualQty: number | null): 'match' | 'surplus' | 'deficit' | 'pending' => {
+    if (!actualQty || actualQty === 0) return 'pending';
+    const diff = actualQty - systemQty;
+    if (diff === 0) return 'match';
+    if (diff > 0) return 'surplus';
+    return 'deficit';
+  };
+
+  const getItemImage = (name: string, category: string): string => {
+    const lowercaseName = name.toLowerCase();
+    if (lowercaseName.includes('роз')) return "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=100&h=100&fit=crop";
+    if (lowercaseName.includes('тюльпан')) return "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=100&h=100&fit=crop";
+    if (lowercaseName.includes('лил')) return "https://images.unsplash.com/photo-1565011523534-747a8601f1a4?w=100&h=100&fit=crop";
+    if (lowercaseName.includes('эвкалипт')) return "https://images.unsplash.com/photo-1586744687037-b4f9c5d1fcd8?w=100&h=100&fit=crop";
+    if (lowercaseName.includes('хризантем')) return "https://images.unsplash.com/photo-1572731973537-34afe46c4bc6?w=100&h=100&fit=crop";
+    if (lowercaseName.includes('лент')) return "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=100&h=100&fit=crop";
+    if (lowercaseName.includes('гипсофил')) return "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&h=100&fit=crop";
+    return "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=100&h=100&fit=crop";
+  };
 
   const handleActualQuantityChange = (id: number, actualQuantity: number) => {
     setAuditItems(prev => prev.map(item => {
@@ -216,13 +273,44 @@ export function InventoryAudit({ onClose, onSaveAudit }: InventoryAuditProps) {
     }));
   };
 
-  const handleSave = () => {
-    const completedItems = auditItems.filter(item => item.status !== 'pending');
-    if (onSaveAudit) {
-      onSaveAudit(completedItems);
+  const handleSave = async () => {
+    if (!auditId) return;
+
+    try {
+      // Prepare items for API
+      const itemsToSave = auditItems
+        .filter(item => item.status !== 'pending')
+        .map(item => ({
+          inventory_id: item.id,
+          actual_quantity: item.actualQuantity
+        }));
+
+      if (itemsToSave.length === 0) {
+        toast.warning("Нет проверенных позиций для сохранения");
+        return;
+      }
+
+      // Save items
+      await inventoryAuditService.saveAuditItems(auditId, itemsToSave);
+
+      // Complete audit if all items checked
+      const allChecked = auditItems.every(item => item.status !== 'pending');
+      if (allChecked) {
+        await inventoryAuditService.completeAudit(auditId);
+        toast.success("Инвентаризация завершена и корректировки применены");
+      } else {
+        toast.success("Результаты сохранены");
+      }
+
+      if (onSaveAudit) {
+        onSaveAudit(auditItems.filter(item => item.status !== 'pending'));
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Error saving audit:", error);
+      toast.error("Ошибка сохранения результатов");
     }
-    console.log('Audit results:', completedItems);
-    onClose();
   };
 
   const stats = {
