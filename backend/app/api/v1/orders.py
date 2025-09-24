@@ -261,6 +261,17 @@ async def delete_order(order_id: int, db: Session = Depends(get_session)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    # Удаляем связанные позиции заказа
+    items = db.exec(select(OrderItem).where(OrderItem.order_id == order_id)).all()
+    for item in items:
+        db.delete(item)
+
+    # Удаляем историю изменений заказа
+    histories = db.exec(select(OrderHistory).where(OrderHistory.order_id == order_id)).all()
+    for h in histories:
+        db.delete(h)
+
+    # Теперь удаляем сам заказ
     db.delete(order)
     db.commit()
     return {"message": "Order deleted successfully"}

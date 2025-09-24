@@ -15,6 +15,7 @@ import { ImageUploader } from "./ImageUploader";
 import { FlowerNameInput } from "./FlowerNameInput";
 import { ColorPicker } from "./common/ColorPicker";
 import { useInventoryList } from "../hooks/useInventoryList";
+import { useProductComposition } from "../hooks/useProductComposition";
 
 interface Product {
   id: number;
@@ -123,6 +124,9 @@ export function EditCatalogForm({
   // Загружаем список цветов со склада
   const { inventory, loading: inventoryLoading, error: inventoryError } = useInventoryList();
 
+  // Загружаем состав через новый API
+  const { composition: apiComposition, loading: compositionLoading, addComposition, removeComposition } = useProductComposition(product?.id);
+
   useEffect(() => {
     if (productId) {
       const foundProduct = products.find(
@@ -136,7 +140,7 @@ export function EditCatalogForm({
         const prepTime = foundProduct.preparation_time || foundProduct.duration;
         setDuration(prepTime ? prepTime.toString() : "");  // Backend uses preparation_time
         setDiscount(foundProduct.discount || "");
-        setComposition(foundProduct.composition || []);
+        setComposition(foundProduct.composition || []);  // Загружаем старое поле состава
         setSelectedColors(foundProduct.colors || []);
         // Ensure width and height are strings
         setWidth(foundProduct.width ? foundProduct.width.toString() : "");
@@ -147,6 +151,25 @@ export function EditCatalogForm({
     }
   }, [productId, products]);
 
+  // Объединяем API состав со старым составом
+  useEffect(() => {
+    if (apiComposition && apiComposition.length > 0) {
+      const convertedFromApi = apiComposition.map(item => ({
+        name: item.inventory?.name || 'Неизвестный материал',
+        count: item.quantity_needed.toString()
+      }));
+
+      // Обновляем состав только если есть данные из API
+      setComposition(prev => {
+        // Сохраняем старые элементы которых нет в API
+        const existingOldItems = prev.filter(oldItem =>
+          !convertedFromApi.some(apiItem => apiItem.name === oldItem.name)
+        );
+        return [...convertedFromApi, ...existingOldItems];
+      });
+    }
+  }, [apiComposition]);
+
   if (!product) {
     return null;
   }
@@ -155,25 +178,84 @@ export function EditCatalogForm({
     setSelectedColors(colors);
   };
 
-  const handleAddFlower = () => {
-    if (newFlowerName.trim() && newFlowerCount.trim()) {
-      setComposition((prev) => [
-        ...prev,
-        {
-          name: newFlowerName.trim(),
-          count: newFlowerCount.trim(),
-        },
-      ]);
-      setNewFlowerName("");
-      setNewFlowerCount("");
+  const handleAddFlower = async () => {
+    if (newFlowerName.trim() && newFlowerCount.trim() && product?.id) {
+      // Находим материал в inventory по имени (двусторонний поиск)
+      const flowerName = newFlowerName.trim().toLowerCase();
+      console.log('Searching for:', flowerName);
+      console.log('Available inventory:', inventory.map(i => i.name));
+
+      const foundInventoryItem = inventory.find(inv => {
+        const invName = inv.name.toLowerCase();
+        const firstWord = invName.split(' ')[0];
+
+        // Проверяем разные варианты совпадения
+        const exactMatch = invName.includes(flowerName) || flowerName.includes(invName);
+        const firstWordMatch = firstWord.includes(flowerName) || flowerName.includes(firstWord);
+        const rootMatch = firstWord.startsWith(flowerName) || flowerName.startsWith(firstWord);
+
+        const matches = exactMatch || firstWordMatch || rootMatch;
+        console.log(`Checking "${invName}" (first word: "${firstWord}") against "${flowerName}": ${matches}`);
+        return matches;
+      });
+
+      console.log('Found inventory item:', foundInventoryItem);
+
+      if (foundInventoryItem) {
+        try {
+          // Добавляем через API
+          console.log('Adding composition:', foundInventoryItem.id, parseFloat(newFlowerCount.trim()));
+          await addComposition(foundInventoryItem.id, parseFloat(newFlowerCount.trim()));
+          setNewFlowerName("");
+          setNewFlowerCount("");
+        } catch (err) {
+          console.error('Error adding flower:', err);
+          // Если API не сработал, добавляем в локальное состояние как fallback
+          setComposition((prev) => [
+            ...prev,
+            {
+              name: newFlowerName.trim(),
+              count: newFlowerCount.trim(),
+            },
+          ]);
+          setNewFlowerName("");
+          setNewFlowerCount("");
+        }
+      } else {
+        // Если не нашли в inventory, добавляем как раньше
+        setComposition((prev) => [
+          ...prev,
+          {
+            name: newFlowerName.trim(),
+            count: newFlowerCount.trim(),
+          },
+        ]);
+        setNewFlowerName("");
+        setNewFlowerCount("");
+      }
     }
   };
 
-  const handleRemoveFlower = (index: number) => {
-    setComposition((prev) =>
-      prev.filter((_, i) => i !== index),
-    );
+  const handleRemoveFlower = async (index: number) => {
+    const item = composition[index];
+
+    // Попытаемся найти этот элемент в API composition и удалить через API
+    const apiItem = apiComposition?.find(api => api.inventory?.name === item.name);
+
+    if (apiItem && product?.id) {
+      try {
+        await removeComposition(apiItem.id);
+      } catch (err) {
+        console.error('Error removing flower:', err);
+        // Если API не сработал, удаляем из локального состояния
+        setComposition((prev) => prev.filter((_, i) => i !== index));
+      }
+    } else {
+      // Удаляем из локального состояния
+      setComposition((prev) => prev.filter((_, i) => i !== index));
+    }
   };
+
 
   const handleSave = async () => {
     if (product) {
@@ -182,7 +264,7 @@ export function EditCatalogForm({
         price: parseFloat(price) || 0,
         preparation_time: duration ? parseFloat(duration) : undefined,  // Backend field name
         discount: discount ? parseFloat(discount) : undefined,
-        composition,
+        composition: composition,  // Сохраняем состав для обратной совместимости
         colors: selectedColors,
         width,
         height,
@@ -314,7 +396,7 @@ export function EditCatalogForm({
             <div className="space-y-6 lg:col-span-1">
               <div>
                 <h3 className="text-gray-900 mb-4 lg:text-base lg:font-medium">Состав букета</h3>
-                
+
                 {/* Existing composition */}
                 {composition.length > 0 && (
                   <div className="space-y-3 mb-4">
@@ -328,7 +410,7 @@ export function EditCatalogForm({
                             {item.name}
                           </span>
                           <span className="text-gray-500 ml-2 lg:text-sm">
-                            — {item.quantity || item.count} шт
+                            — {item.count} шт
                           </span>
                         </div>
                         <button

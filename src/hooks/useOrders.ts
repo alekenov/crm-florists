@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Order } from '../src/types';
 import { SQLOrder } from '../types/sql-api';
 import { ordersAPI, handleAPIError } from '../services/api-client';
-import { DataAdapters } from '../adapters/data-adapters';
+import { adaptBackendOrderToOrder, adaptBackendOrdersToOrders, adaptOrderToBackendOrder } from '../adapters/dataAdapters';
 import { toast } from 'sonner@2.0.3';
 
 export interface UseOrdersState {
@@ -57,7 +57,7 @@ export function useOrders(initialFilters: Record<string, any> = {}): UseOrdersRe
 
       // Convert SQL orders to React orders
       const reactOrders = response.orders.map(sqlOrder =>
-        DataAdapters.sqlOrderToReactOrder(sqlOrder)
+        adaptBackendOrderToOrder(sqlOrder)
       );
 
       setState(prev => ({
@@ -87,13 +87,13 @@ export function useOrders(initialFilters: Record<string, any> = {}): UseOrdersRe
   const updateOrder = useCallback(async (id: string, updates: Partial<Order>) => {
     try {
       // Convert React updates to SQL format
-      const sqlUpdates = DataAdapters.reactOrderToSQLUpdate(updates);
+      const sqlUpdates = adaptOrderToBackendOrder(updates);
 
       // Make API call
       const updatedSQLOrder = await ordersAPI.updateOrder(parseInt(id), sqlUpdates);
 
       // Convert back to React format
-      const updatedReactOrder = DataAdapters.sqlOrderToReactOrder(updatedSQLOrder);
+      const updatedReactOrder = adaptBackendOrderToOrder(updatedSQLOrder);
 
       // Update local state
       setState(prev => ({
@@ -121,9 +121,9 @@ export function useOrders(initialFilters: Record<string, any> = {}): UseOrdersRe
     try {
       // This is a simplified implementation
       // In reality, you'd need to handle the complex creation logic
-      const sqlOrderData = DataAdapters.reactOrderToSQLUpdate(orderData);
+      const sqlOrderData = adaptOrderToBackendOrder(orderData);
       const createdSQLOrder = await ordersAPI.createOrder(sqlOrderData);
-      const createdReactOrder = DataAdapters.sqlOrderToReactOrder(createdSQLOrder);
+      const createdReactOrder = adaptBackendOrderToOrder(createdSQLOrder);
 
       // Add to local state
       setState(prev => ({

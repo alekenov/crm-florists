@@ -51,6 +51,7 @@ export function adaptBackendProductToProduct(backendProduct: BackendProduct): Pr
   let parsedImages = [];
   let parsedColors = [];
   let parsedComposition = [];
+  let parsedIngredients = [];
 
   try {
     if (backendProduct.images) {
@@ -65,7 +66,7 @@ export function adaptBackendProductToProduct(backendProduct: BackendProduct): Pr
       parsedColors = JSON.parse(backendProduct.colors);
     }
   } catch (e) {
-    parsedColors = ["#4ecdc4"];
+    parsedColors = [];
   }
 
   try {
@@ -76,46 +77,67 @@ export function adaptBackendProductToProduct(backendProduct: BackendProduct): Pr
     parsedComposition = [];
   }
 
+  try {
+    if (backendProduct.ingredients) {
+      parsedIngredients = JSON.parse(backendProduct.ingredients);
+    }
+  } catch (e) {
+    parsedIngredients = [];
+  }
+
   return {
     id: backendProduct.id,
     title: backendProduct.name,
+    name: backendProduct.name, // Добавлено для совместимости
     price: backendProduct.price.toString(),
     image: backendProduct.image_url || parsedImages[0] || "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400",
     images: parsedImages,
-    isAvailable: backendProduct.is_available !== false,
+    isAvailable: backendProduct.is_available !== undefined ? backendProduct.is_available : true,
     createdAt: new Date(backendProduct.created_at),
-    type: (backendProduct.type || "catalog") as "catalog" | "vitrina",
+    type: (backendProduct.product_type || "catalog") as "catalog" | "custom",
+    category: backendProduct.category || undefined,
 
     // Map category to appropriate fields
     description: backendProduct.description || undefined,
     preparationTime: backendProduct.preparation_time || undefined,
     preparation_time: backendProduct.preparation_time || undefined, // Add both formats for compatibility
 
-    // New fields
+    // New fields from extended model
     discount: backendProduct.discount?.toString() || undefined,
     composition: parsedComposition,
     productionTime: backendProduct.production_time || undefined,
     production_time: backendProduct.production_time || undefined, // Add both formats for compatibility
 
     // Size fields
-    width: backendProduct.width || "30",
-    height: backendProduct.height || "40",
-    colors: parsedColors.length > 0 ? parsedColors : ["#4ecdc4"],
-    catalogWidth: backendProduct.width || "25",
-    catalogHeight: backendProduct.height || "35",
-    ingredients: [],
+    width: backendProduct.width || undefined,
+    height: backendProduct.height || undefined,
+    colors: parsedColors.length > 0 ? parsedColors : undefined,
+    catalogWidth: backendProduct.catalog_width || undefined,
+    catalogHeight: backendProduct.catalog_height || undefined,
+    ingredients: parsedIngredients,
     expiryDate: backendProduct.expiry_date ? new Date(backendProduct.expiry_date) : undefined
   };
 }
 
 export function adaptProductToBackendProduct(product: Partial<Product>): any {
   return {
-    name: product.title,
+    name: product.title || product.name,
     description: product.description || undefined,
     price: parseFloat(product.price || "0"),
     category: product.category || 'букет',
     preparation_time: product.preparationTime || undefined,
-    image_url: product.image
+    image_url: product.image,
+    // Новые поля из расширенной модели
+    is_available: product.isAvailable !== undefined ? product.isAvailable : true,
+    product_type: product.type || 'catalog',
+    images: product.images ? JSON.stringify(product.images) : undefined,
+    production_time: product.productionTime || undefined,
+    width: product.width || undefined,
+    height: product.height || undefined,
+    colors: product.colors ? JSON.stringify(product.colors) : undefined,
+    catalog_width: product.catalogWidth || undefined,
+    catalog_height: product.catalogHeight || undefined,
+    ingredients: product.ingredients ? JSON.stringify(product.ingredients) : undefined
   };
 }
 

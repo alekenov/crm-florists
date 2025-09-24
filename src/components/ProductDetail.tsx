@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { ArrowLeft, Edit, ExternalLink, Copy, Check, Share } from "lucide-react";
+import { ArrowLeft, Edit, ExternalLink, Copy, Check, Share, Calculator } from "lucide-react";
 import { useAppActions } from "../src/hooks/useAppActions";
 import { useIntegratedAppState } from "../hooks/useIntegratedAppState";
 import { useProductDetail } from "../hooks/useDetailData";
+import { useProductComposition } from "../hooks/useProductComposition";
 import { adaptBackendProductToProduct } from "../adapters/dataAdapters";
 import { Product } from "../src/types";
 import { toast } from "sonner@2.0.3";
@@ -45,6 +46,9 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
   const [editedPrice, setEditedPrice] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Fetch product composition data
+  const { composition, totalCost, loading: compositionLoading } = useProductComposition(productId);
 
   // Используем хуки состояния приложения
   const state = useIntegratedAppState();
@@ -213,17 +217,42 @@ export function ProductDetail({ productId, products, onClose, onUpdateProduct, o
       )}
 
       {/* Состав букета */}
-      {product.composition && product.composition.length > 0 && (
+      {!compositionLoading && composition && composition.length > 0 && (
         <div className="py-6 border-t border-gray-200">
-          <h3 className="text-gray-900 mb-4">Состав букета</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-gray-900">Состав букета</h3>
+            {totalCost > 0 && (
+              <div className="flex items-center gap-1 text-sm text-gray-600 bg-green-50 px-2 py-1 rounded">
+                <Calculator className="w-4 h-4" />
+                {Math.round(totalCost)}₸
+              </div>
+            )}
+          </div>
           <div className="space-y-3">
-            {product.composition.map((item, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <span className="text-gray-700">{item.name}</span>
-                <span className="text-gray-900">{item.quantity || item.count} шт</span>
+            {composition.map((item) => (
+              <div key={item.id} className="flex justify-between items-center">
+                <div className="flex-1">
+                  <span className="text-gray-700">{item.inventory?.name || 'Неизвестный материал'}</span>
+                  {item.inventory?.price_per_unit && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {Math.round(item.inventory.price_per_unit * item.quantity_needed)}₸
+                      {' • '}
+                      Остаток: {item.inventory.quantity} {item.inventory.unit}
+                    </div>
+                  )}
+                </div>
+                <span className="text-gray-900">{item.quantity_needed} {item.inventory?.unit || 'шт'}</span>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Показать загрузку состава */}
+      {compositionLoading && (
+        <div className="py-6 border-t border-gray-200">
+          <h3 className="text-gray-900 mb-4">Состав букета</h3>
+          <div className="text-gray-500 text-sm">Загрузка состава...</div>
         </div>
       )}
 

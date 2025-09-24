@@ -1,6 +1,6 @@
 // Test file to verify our API integration
 import { ordersAPI, handleAPIError } from './services/api-client';
-import { DataAdapters } from './adapters/data-adapters';
+import { adaptBackendOrderToOrder } from './adapters/dataAdapters';
 
 console.log('🚀 Starting API integration test...');
 
@@ -22,7 +22,7 @@ async function testAPIIntegration() {
 
       // Test 3: Data adapter conversion
       console.log('🔄 Testing data adapter...');
-      const reactOrder = DataAdapters.sqlOrderToReactOrder(singleOrder);
+      const reactOrder = adaptBackendOrderToOrder(singleOrder);
       console.log('✅ SQL order converted to React format:');
       console.log('  - ID:', reactOrder.id, '(string)');
       console.log('  - Number:', reactOrder.number);

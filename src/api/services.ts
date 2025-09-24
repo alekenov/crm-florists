@@ -195,6 +195,30 @@ export const statsService = {
   }
 };
 
+// ============== PRODUCT COMPOSITION SERVICES ==============
+export const productCompositionService = {
+  async getComposition(productId: number): Promise<any[]> {
+    return apiClient.get<any[]>(`/api/products/${productId}/composition`);
+  },
+
+  async addComposition(productId: number, inventoryId: number, quantityNeeded: number): Promise<any> {
+    const url = `/api/products/${productId}/composition?inventory_id=${inventoryId}&quantity_needed=${quantityNeeded}`;
+    return apiClient.post<any>(url);
+  },
+
+  async updateComposition(productId: number, compositionId: number, quantityNeeded: number): Promise<any> {
+    return apiClient.put<any>(`/api/products/${productId}/composition/${compositionId}`, null, {
+      params: {
+        quantity_needed: quantityNeeded
+      }
+    });
+  },
+
+  async deleteComposition(productId: number, compositionId: number): Promise<void> {
+    await apiClient.delete(`/api/products/${productId}/composition/${compositionId}`);
+  }
+};
+
 // ============== INITIALIZATION SERVICES ==============
 export const initService = {
   async initializeSampleData(): Promise<any> {
@@ -210,5 +234,6 @@ export {
   orderService as orders,
   userService as users,
   statsService as stats,
-  initService as init
+  initService as init,
+  productCompositionService as productComposition
 };

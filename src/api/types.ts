@@ -40,6 +40,22 @@ export interface Product {
   preparation_time?: number;
   image_url?: string;
   created_at: string;
+  // Новые поля из расширенной модели Backend
+  is_available?: boolean;
+  product_type?: string;
+  images?: string;  // JSON строка
+  production_time?: string;
+  width?: string;
+  height?: string;
+  colors?: string;  // JSON строка
+  catalog_width?: string;
+  catalog_height?: string;
+  ingredients?: string;  // JSON строка
+  // Дополнительные поля для совместимости
+  discount?: number;
+  composition?: string;
+  type?: string;
+  expiry_date?: string;
 }
 
 export interface ProductCreate {

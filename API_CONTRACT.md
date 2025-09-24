@@ -521,8 +521,78 @@ Health check
   preparation_time?: integer // В минутах
   image_url?: string
   created_at: datetime
+
+  // Расширенные поля (добавлены в v2.1.0, протестированы)
+  is_available?: boolean // Default: true - Доступность товара
+  product_type?: string // Default: "catalog" - Тип товара ("catalog" | "custom")
+  images?: string // JSON массив URL дополнительных изображений
+  production_time?: string // Время производства (например: "2-3 часа")
+  width?: string // Ширина букета в см (например: "35")
+  height?: string // Высота букета в см (например: "45")
+  colors?: string // JSON массив цветов (например: ["red", "white", "pink"])
+  catalog_width?: string // Ширина в каталоге
+  catalog_height?: string // Высота в каталоге
+  ingredients?: string // JSON массив состава (например: ["розы", "лилии", "зелень"])
 }
 ```
+
+#### Примеры запросов Product API
+
+**GET /api/products/1** - Получить товар:
+```json
+{
+  "name": "Букет роз 'Классик'",
+  "product_type": "catalog",
+  "catalog_height": null,
+  "description": "Букет из 11 красных роз с зеленью",
+  "images": "[]",
+  "ingredients": null,
+  "price": 15000.0,
+  "production_time": "",
+  "category": "букет",
+  "width": "35",
+  "preparation_time": 30,
+  "height": "45",
+  "image_url": "https://example.com/roses.jpg",
+  "colors": "[\"red\",\"white\"]",
+  "id": 1,
+  "created_at": "2025-09-23T13:20:13.745515",
+  "catalog_width": null,
+  "is_available": true
+}
+```
+
+**POST /api/products** - Создать товар с новыми полями:
+```json
+{
+  "name": "Букет Премиум",
+  "description": "Роскошный букет из элитных цветов",
+  "price": 25000,
+  "category": "букет",
+  "preparation_time": 60,
+  "image_url": "https://example.com/premium.jpg",
+  "is_available": true,
+  "product_type": "custom",
+  "production_time": "3-4 часа",
+  "width": "45",
+  "height": "55",
+  "colors": "[\"красный\", \"белый\", \"розовый\"]",
+  "catalog_width": "40",
+  "catalog_height": "50",
+  "ingredients": "[\"розы\", \"лилии\", \"орхидеи\", \"зелень\"]",
+  "images": "[\"https://example.com/img1.jpg\", \"https://example.com/img2.jpg\"]"
+}
+```
+
+**PUT /api/products/{id}** - Обновить товар (частичное обновление):
+```json
+{
+  "price": 35000,
+  "is_available": false,
+  "width": "50",
+  "height": "60",
+  "colors": "[\"золотой\", \"белый\", \"красный\", \"черный\"]"
+}
 
 ### Inventory (Инвентарь)
 ```typescript
@@ -624,3 +694,28 @@ Health check
 
 ## Authentication
 В текущей версии API аутентификация не реализована. Планируется добавление JWT токенов в будущих версиях.
+
+## Важные замечания по интеграции (v2.1.0)
+
+### Особенности работы с расширенными полями Product
+1. **Сериализация JSON полей**: Поля `colors`, `images`, `ingredients` хранятся как JSON-строки
+   - При отправке: Передавайте как JSON-строки (например: `"[\"red\", \"white\"]"`)
+   - При получении: Парсите JSON для использования в UI
+
+2. **Параметры FastAPI**: Используется `response_model_exclude_none=False` для возврата всех полей
+
+3. **Редактирование через UI**:
+   - Цвета выбираются кнопками (red, white, pink, etc.)
+   - Размеры указываются числом в см
+   - Состав сохраняется в поле ingredients
+
+4. **Протестированные сценарии**:
+   - ✅ Создание продукта со всеми новыми полями
+   - ✅ Обновление через UI с сохранением в БД
+   - ✅ Отображение характеристик на странице товара
+   - ✅ CRUD операции через curl
+
+### Changelog v2.1.0 (2025-09-24)
+- Добавлены расширенные поля в модель Product
+- Обновлены адаптеры frontend для работы с новыми полями
+- Протестирована полная интеграция UI с backend

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Order } from '../src/types';
 import { ordersAPI, handleAPIError } from '../services/api-client';
-import { DataAdapters } from '../adapters/data-adapters';
+import { adaptBackendOrderToOrder, adaptOrderToBackendOrder } from '../adapters/dataAdapters';
 import { toast } from 'sonner@2.0.3';
 
 export interface UseOrderDetailState {
@@ -50,7 +50,7 @@ export function useOrderDetail(orderId: string): UseOrderDetailReturn {
 
     try {
       const sqlOrder = await ordersAPI.getOrder(parseInt(orderId));
-      const reactOrder = DataAdapters.sqlOrderToReactOrder(sqlOrder);
+      const reactOrder = adaptBackendOrderToOrder(sqlOrder);
 
       setState(prev => ({
         ...prev,
@@ -88,13 +88,13 @@ export function useOrderDetail(orderId: string): UseOrderDetailReturn {
 
     try {
       // Convert React updates to SQL format
-      const sqlUpdates = DataAdapters.reactOrderToSQLUpdate(updates);
+      const sqlUpdates = adaptOrderToBackendOrder(updates);
 
       // Make API call
       const updatedSQLOrder = await ordersAPI.updateOrder(parseInt(orderId), sqlUpdates);
 
       // Convert back to React format
-      const updatedReactOrder = DataAdapters.sqlOrderToReactOrder(updatedSQLOrder);
+      const updatedReactOrder = adaptBackendOrderToOrder(updatedSQLOrder);
 
       setState(prev => ({
         ...prev,
